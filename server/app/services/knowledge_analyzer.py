@@ -42,3 +42,50 @@ def match_archaeology_query(query: str, decisions: list[dict]) -> list[dict]:
             results.append({**dec, "confidence": confidence, "match_count": match_count})
     results.sort(key=lambda x: x["match_count"], reverse=True)
     return results[:5]
+
+
+def compute_decay_summary(decay_items: list) -> dict:
+    """Summarize knowledge decay across all modules."""
+    if not decay_items:
+        return {"avg_decay": 0, "critical_count": 0, "stale_count": 0, "fresh_count": 0}
+    critical = sum(1 for d in decay_items if d.status == "critical")
+    stale = sum(1 for d in decay_items if d.status == "stale")
+    aging = sum(1 for d in decay_items if d.status == "aging")
+    fresh = sum(1 for d in decay_items if d.status == "fresh")
+    avg_decay = round(sum(d.decay_score for d in decay_items) / len(decay_items), 1)
+    return {
+        "avg_decay": avg_decay,
+        "critical_count": critical,
+        "stale_count": stale,
+        "aging_count": aging,
+        "fresh_count": fresh,
+        "total": len(decay_items),
+    }
+
+
+def compute_transfer_velocity(transfer_matrix: list) -> dict:
+    """Compute knowledge transfer velocity metrics."""
+    if not transfer_matrix:
+        return {"avg_progress": 0, "completed": 0, "in_progress": 0, "not_started": 0}
+    completed = sum(1 for t in transfer_matrix if t.status == "completed")
+    in_progress = sum(1 for t in transfer_matrix if t.status == "in-progress")
+    not_started = sum(1 for t in transfer_matrix if t.status == "not-started")
+    avg_progress = round(sum(t.progress for t in transfer_matrix) / len(transfer_matrix), 1)
+    return {
+        "avg_progress": avg_progress,
+        "completed": completed,
+        "in_progress": in_progress,
+        "not_started": not_started,
+        "total": len(transfer_matrix),
+    }
+
+
+def compute_knowledge_gaps(onboarding_insights: list) -> list[dict]:
+    """Return undocumented questions sorted by frequency — knowledge gaps."""
+    gaps = [
+        {"question": i.question, "ask_count": i.ask_count, "module": i.gap_module, "avg_confidence": i.avg_confidence}
+        for i in onboarding_insights
+        if not i.has_documented_answer
+    ]
+    gaps.sort(key=lambda x: x["ask_count"], reverse=True)
+    return gaps

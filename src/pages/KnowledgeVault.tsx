@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Search, MessageSquare, AlertTriangle, BookOpen, GitBranch, HelpCircle, Layers, Shield } from 'lucide-react'
+import { Search, MessageSquare, AlertTriangle, BookOpen, GitBranch, HelpCircle, Layers, Shield, Clock, Users, FileWarning, Link2, Calendar, TrendingDown } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
-import { knowledgeVaultApi, type KVDashboard, type KVNode, type KVInterviewMessage, type KVDecision, type KVRiskScore, type KVExtraction, type KVOnboardingQuery, type KVArchaeologyResult } from '../api/client'
+import { knowledgeVaultApi, type KVDashboard, type KVNode, type KVInterviewMessage, type KVDecision, type KVRiskScore, type KVExtraction, type KVOnboardingQuery, type KVArchaeologyResult, type KVDecayItem, type KVInterviewSession, type KVTransferEntry, type KVUndocumentedRegion, type KVOnboardingInsight, type KVDecisionChainLink } from '../api/client'
 
 const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
 
@@ -22,6 +22,12 @@ export default function KnowledgeVault() {
     const [onboarding, setOnboarding] = useState<KVOnboardingQuery[]>([])
     const [archaeology, setArchaeology] = useState<KVArchaeologyResult[]>([])
     const [selectedNode, setSelectedNode] = useState<string | null>(null)
+    const [decayItems, setDecayItems] = useState<KVDecayItem[]>([])
+    const [interviewSessions, setInterviewSessions] = useState<KVInterviewSession[]>([])
+    const [transferMatrix, setTransferMatrix] = useState<KVTransferEntry[]>([])
+    const [undocumented, setUndocumented] = useState<KVUndocumentedRegion[]>([])
+    const [onboardingInsights, setOnboardingInsights] = useState<KVOnboardingInsight[]>([])
+    const [decisionChains, setDecisionChains] = useState<KVDecisionChainLink[]>([])
 
     useEffect(() => {
         knowledgeVaultApi.dashboard().then((d) => {
@@ -32,6 +38,12 @@ export default function KnowledgeVault() {
             setExtractions(d.recent_extractions)
             setOnboarding(d.onboarding_queries)
             setArchaeology(d.archaeology_results)
+            setDecayItems(d.decay_items)
+            setInterviewSessions(d.interview_sessions)
+            setTransferMatrix(d.transfer_matrix)
+            setUndocumented(d.undocumented_regions)
+            setOnboardingInsights(d.onboarding_insights)
+            setDecisionChains(d.decision_chains)
         })
     }, [])
 
@@ -345,6 +357,275 @@ export default function KnowledgeVault() {
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            {/* ── Knowledge Decay Tracker ── */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                    <TrendingDown size={14} className="inline mr-2" style={{ color: '#EF4444' }} />
+                    Knowledge Decay Tracker — How Stale Is Your Reasoning?
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Knowledge decays as code changes without re-validating architectural decisions
+                </p>
+                <div className="grid grid-cols-4 gap-3 mb-4">
+                    {[
+                        { label: 'Critical', count: decayItems.filter(d => d.status === 'critical').length, color: '#EF4444' },
+                        { label: 'Aging', count: decayItems.filter(d => d.status === 'aging').length, color: '#F59E0B' },
+                        { label: 'Fresh', count: decayItems.filter(d => d.status === 'fresh').length, color: '#10B981' },
+                        { label: 'Avg Decay', count: decayItems.length > 0 ? Math.round(decayItems.reduce((s, d) => s + d.decay_score, 0) / decayItems.length) : 0, color: '#00D4FF', suffix: '%' },
+                    ].map((stat) => (
+                        <div key={stat.label} className="text-center p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                            <p className="text-lg font-black" style={{ color: stat.color }}>{stat.count}{stat.suffix || ''}</p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>{stat.label}</p>
+                        </div>
+                    ))}
+                </div>
+                <div className="space-y-2">
+                    {decayItems.sort((a, b) => b.decay_score - a.decay_score).map((item) => {
+                        const decayColor = item.status === 'critical' ? '#EF4444' : item.status === 'aging' ? '#F59E0B' : '#10B981'
+                        return (
+                            <div key={item.module_id} className="flex items-center gap-3 p-3 rounded-xl"
+                                style={{ background: `${decayColor}06`, border: `1px solid ${decayColor}18` }}>
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0"
+                                    style={{ background: `${decayColor}15` }}>
+                                    <span className="text-xs font-black" style={{ color: decayColor }}>{item.decay_score}</span>
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-xs font-semibold text-white">{item.module_label}</p>
+                                        <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${decayColor}15`, color: decayColor }}>
+                                            {item.status}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                        Last validated: {item.last_validated} · {item.code_changes_since} code changes since · Owner: {item.owner}
+                                    </p>
+                                </div>
+                                <div className="shrink-0 w-24">
+                                    <div className="progress-bar h-1.5">
+                                        <div className="progress-fill" style={{ width: `${item.decay_score}%`, background: decayColor }} />
+                                    </div>
+                                    <p className="text-xs text-right mt-0.5" style={{ color: '#64748B' }}>{item.days_since_validated}d ago</p>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* ── Interview Session Planner + Knowledge Transfer Matrix ── */}
+            <div className="grid grid-cols-2 gap-6">
+                {/* Interview Session Planner */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <Calendar size={14} className="inline mr-2" style={{ color: '#7C3AED' }} />
+                        Interview Session Planner
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Scheduled knowledge extraction sessions with senior developers
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                        {[
+                            { label: 'Completed', count: interviewSessions.filter(s => s.status === 'completed').length, color: '#10B981' },
+                            { label: 'Scheduled', count: interviewSessions.filter(s => s.status === 'scheduled').length, color: '#00D4FF' },
+                            { label: 'Overdue', count: interviewSessions.filter(s => s.status === 'overdue').length, color: '#EF4444' },
+                        ].map((s) => (
+                            <div key={s.label} className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                <p className="text-sm font-black" style={{ color: s.color }}>{s.count}</p>
+                                <p style={{ color: '#94A3B8', fontSize: 10 }}>{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-2" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                        {interviewSessions.map((sess) => {
+                            const sColor = sess.status === 'completed' ? '#10B981' : sess.status === 'overdue' ? '#EF4444' : '#00D4FF'
+                            return (
+                                <div key={sess.id} className="p-3 rounded-xl" style={{ background: `${sColor}06`, border: `1px solid ${sColor}18` }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs font-semibold text-white">{sess.module}</p>
+                                            <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: `${sColor}15`, color: sColor }}>
+                                                {sess.status === 'completed' ? '✅ Done' : sess.status === 'overdue' ? '⚠️ Overdue' : '📅 Scheduled'}
+                                            </span>
+                                        </div>
+                                        <span className="text-xs" style={{ color: '#64748B' }}>{sess.scheduled_date}</span>
+                                    </div>
+                                    <p className="text-xs mb-2" style={{ color: '#94A3B8' }}>👤 {sess.senior_dev}</p>
+                                    <div className="flex flex-wrap gap-1 mb-2">
+                                        {sess.topics.map((t, i) => (
+                                            <span key={i} className="px-2 py-0.5 rounded text-xs"
+                                                style={{ background: 'rgba(124,58,237,0.1)', color: '#A78BFA' }}>{t}</span>
+                                        ))}
+                                    </div>
+                                    {sess.status === 'completed' && (
+                                        <div className="flex items-center gap-3 text-xs">
+                                            <span style={{ color: '#10B981' }}>{sess.decisions_captured} decisions captured</span>
+                                            <span style={{ color: '#94A3B8' }}>Coverage: {sess.coverage_before}% → <span className="font-bold text-white">{sess.coverage_after}%</span></span>
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Knowledge Transfer Matrix */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <Users size={14} className="inline mr-2" style={{ color: '#00D4FF' }} />
+                        Knowledge Transfer Matrix
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Who's learning from whom — and how far along is the transfer?
+                    </p>
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                        {[
+                            { label: 'Completed', count: transferMatrix.filter(t => t.status === 'completed').length, color: '#10B981' },
+                            { label: 'In Progress', count: transferMatrix.filter(t => t.status === 'in-progress').length, color: '#F59E0B' },
+                            { label: 'Not Started', count: transferMatrix.filter(t => t.status === 'not-started').length, color: '#EF4444' },
+                        ].map((s) => (
+                            <div key={s.label} className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                <p className="text-sm font-black" style={{ color: s.color }}>{s.count}</p>
+                                <p style={{ color: '#94A3B8', fontSize: 10 }}>{s.label}</p>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-2" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                        {transferMatrix.map((entry, i) => {
+                            const tColor = entry.status === 'completed' ? '#10B981' : entry.status === 'in-progress' ? '#F59E0B' : '#EF4444'
+                            return (
+                                <div key={i} className="p-3 rounded-xl" style={{ background: `${tColor}06`, border: `1px solid ${tColor}18` }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-semibold text-white">{entry.module}</p>
+                                        <span className="text-xs font-bold" style={{ color: tColor }}>{entry.progress}%</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: '#94A3B8' }}>
+                                        <span style={{ color: '#7C3AED' }}>{entry.from_dev}</span>
+                                        <span>→</span>
+                                        <span style={{ color: '#00D4FF' }}>{entry.to_dev}</span>
+                                        <span className="ml-auto">{entry.sessions_completed}/{entry.sessions_total} sessions</span>
+                                    </div>
+                                    <div className="progress-bar h-2">
+                                        <div className="progress-fill" style={{ width: `${entry.progress}%`, background: `linear-gradient(90deg, ${tColor}88, ${tColor})` }} />
+                                    </div>
+                                    {entry.last_session !== '—' && (
+                                        <p className="text-xs mt-1" style={{ color: '#64748B' }}>Last session: {entry.last_session}</p>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Undocumented Decision Detector + Onboarding Insights ── */}
+            <div className="grid grid-cols-2 gap-6">
+                {/* Undocumented Decision Detector */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <FileWarning size={14} className="inline mr-2" style={{ color: '#F59E0B' }} />
+                        Undocumented Decision Detector
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Complex code regions with no captured architectural reasoning — interview these owners next
+                    </p>
+                    <div className="space-y-2">
+                        {undocumented.map((region, i) => {
+                            const pColor = region.priority === 'critical' ? '#EF4444' : region.priority === 'high' ? '#F59E0B' : '#00D4FF'
+                            return (
+                                <div key={i} className="p-3 rounded-xl" style={{ background: `${pColor}06`, border: `1px solid ${pColor}18` }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="badge-cyan text-xs">{region.code_path}</span>
+                                        <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ background: `${pColor}15`, color: pColor }}>
+                                            {region.priority}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs mb-2" style={{ color: '#CBD5E1', lineHeight: '1.5' }}>{region.reason_suspected}</p>
+                                    <div className="flex items-center gap-3 text-xs" style={{ color: '#94A3B8' }}>
+                                        <span>Complexity: <span className="font-bold" style={{ color: region.complexity_score >= 80 ? '#EF4444' : '#F59E0B' }}>{region.complexity_score}</span>/100</span>
+                                        <span>{region.lines} lines</span>
+                                        <span>👤 {region.modified_by}</span>
+                                        <span>📅 {region.last_modified}</span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Onboarding Insights — FAQ Leaderboard */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <HelpCircle size={14} className="inline mr-2" style={{ color: '#10B981' }} />
+                        Onboarding Insights — Knowledge Gap Detection
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Most-asked questions by new devs — red = no documented answer (knowledge gap!)
+                    </p>
+                    <div className="space-y-2">
+                        {onboardingInsights.sort((a, b) => b.ask_count - a.ask_count).map((insight, i) => {
+                            const hasAnswer = insight.has_documented_answer
+                            const iColor = hasAnswer ? '#10B981' : '#EF4444'
+                            return (
+                                <div key={i} className="p-3 rounded-xl" style={{ background: `${iColor}06`, border: `1px solid ${iColor}18` }}>
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                        <p className="text-xs font-medium text-white flex-1">{insight.question}</p>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-xs px-1.5 py-0.5 rounded font-bold" style={{ background: `${iColor}15`, color: iColor }}>
+                                                {hasAnswer ? '✅ Documented' : '❌ GAP'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-xs" style={{ color: '#94A3B8' }}>
+                                        <span>Asked <span className="font-bold text-white">{insight.ask_count}×</span></span>
+                                        <span>Confidence: <span className="font-bold" style={{ color: insight.avg_confidence >= 80 ? '#10B981' : insight.avg_confidence >= 50 ? '#F59E0B' : '#EF4444' }}>{insight.avg_confidence}%</span></span>
+                                        <span>Module: {insight.gap_module}</span>
+                                        <span className="ml-auto">{insight.last_asked}</span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* ── Decision Chain Graph ── */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                    <Link2 size={14} className="inline mr-2" style={{ color: '#818CF8' }} />
+                    Decision Chain Graph — How Decisions Connect
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Architectural decisions don't exist in isolation — one choice cascades into others
+                </p>
+                <div className="space-y-3">
+                    {decisionChains.map((chain, i) => {
+                        const relColor = chain.relationship === 'led-to' ? '#7C3AED' : chain.relationship === 'depends-on' ? '#00D4FF' : chain.relationship === 'replaced' ? '#F59E0B' : '#EF4444'
+                        const relIcon = chain.relationship === 'led-to' ? '→' : chain.relationship === 'depends-on' ? '⇅' : chain.relationship === 'replaced' ? '↻' : '⚡'
+                        return (
+                            <div key={i} className="p-4 rounded-xl" style={{ background: `${relColor}06`, border: `1px solid ${relColor}18` }}>
+                                <div className="flex items-center gap-3 mb-2">
+                                    <span className="px-2 py-1 rounded text-xs font-bold" style={{ background: 'rgba(129,140,248,0.12)', color: '#A5B4FC' }}>
+                                        {chain.from_decision}
+                                    </span>
+                                    <span className="text-sm font-bold" style={{ color: relColor }}>{relIcon}</span>
+                                    <span className="text-xs px-1.5 py-0.5 rounded font-medium" style={{ background: `${relColor}15`, color: relColor }}>
+                                        {chain.relationship}
+                                    </span>
+                                    <span className="text-sm font-bold" style={{ color: relColor }}>{relIcon}</span>
+                                    <span className="px-2 py-1 rounded text-xs font-bold" style={{ background: 'rgba(129,140,248,0.12)', color: '#A5B4FC' }}>
+                                        {chain.to_decision}
+                                    </span>
+                                    <span className="ml-auto text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,212,255,0.1)', color: '#00D4FF' }}>
+                                        Impact: {chain.impact_radius} module{chain.impact_radius > 1 ? 's' : ''}
+                                    </span>
+                                </div>
+                                <p className="text-xs" style={{ color: '#CBD5E1', lineHeight: '1.5' }}>{chain.description}</p>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
         </div>

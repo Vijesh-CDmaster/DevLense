@@ -69,6 +69,70 @@ class OnboardingQuery(BaseModel):
     date: str
 
 
+# ── New models for enhanced Knowledge Transfer ──
+
+
+class KnowledgeDecayItem(BaseModel):
+    module_id: str
+    module_label: str
+    last_validated: str
+    days_since_validated: int
+    decay_score: int  # 0-100, higher = more stale
+    code_changes_since: int
+    owner: str
+    status: str  # fresh | aging | stale | critical
+
+
+class InterviewSession(BaseModel):
+    id: str
+    senior_dev: str
+    module: str
+    status: str  # scheduled | completed | overdue
+    scheduled_date: str
+    topics: list[str]
+    decisions_captured: int
+    coverage_before: int
+    coverage_after: int
+
+
+class KnowledgeTransferEntry(BaseModel):
+    from_dev: str
+    to_dev: str
+    module: str
+    progress: int  # 0-100
+    sessions_completed: int
+    sessions_total: int
+    last_session: str
+    status: str  # not-started | in-progress | completed
+
+
+class UndocumentedRegion(BaseModel):
+    code_path: str
+    complexity_score: int  # 1-100
+    lines: int
+    last_modified: str
+    modified_by: str
+    reason_suspected: str
+    priority: str  # critical | high | medium
+
+
+class OnboardingInsight(BaseModel):
+    question: str
+    ask_count: int
+    avg_confidence: int
+    has_documented_answer: bool
+    gap_module: str
+    last_asked: str
+
+
+class DecisionChainLink(BaseModel):
+    from_decision: str
+    to_decision: str
+    relationship: str  # led-to | replaced | depends-on | conflicts-with
+    impact_radius: int  # number of modules affected
+    description: str
+
+
 class KnowledgeVaultDashboard(BaseModel):
     nodes: list[KnowledgeNode]
     interview_history: list[InterviewMessage]
@@ -77,3 +141,9 @@ class KnowledgeVaultDashboard(BaseModel):
     recent_extractions: list[ReasoningExtraction]
     onboarding_queries: list[OnboardingQuery]
     archaeology_results: list[ArchaeologyResult]
+    decay_items: list[KnowledgeDecayItem]
+    interview_sessions: list[InterviewSession]
+    transfer_matrix: list[KnowledgeTransferEntry]
+    undocumented_regions: list[UndocumentedRegion]
+    onboarding_insights: list[OnboardingInsight]
+    decision_chains: list[DecisionChainLink]

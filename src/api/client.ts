@@ -449,6 +449,12 @@ export const knowledgeVaultApi = {
     onboarding: () => fetchApi<KVOnboardingQuery[]>('/knowledge-vault/onboarding'),
     archaeology: () => fetchApi<KVArchaeologyResult[]>('/knowledge-vault/archaeology'),
     busFactor: () => fetchApi<{ module: string; owners: number; risk: string }[]>('/knowledge-vault/bus-factor'),
+    decayItems: () => fetchApi<KVDecayItem[]>('/knowledge-vault/decay'),
+    interviewSessions: () => fetchApi<KVInterviewSession[]>('/knowledge-vault/interview-sessions'),
+    transferMatrix: () => fetchApi<KVTransferEntry[]>('/knowledge-vault/transfer-matrix'),
+    undocumented: () => fetchApi<KVUndocumentedRegion[]>('/knowledge-vault/undocumented'),
+    onboardingInsights: () => fetchApi<KVOnboardingInsight[]>('/knowledge-vault/onboarding-insights'),
+    decisionChains: () => fetchApi<KVDecisionChainLink[]>('/knowledge-vault/decision-chains'),
 }
 
 // ── Knowledge Vault types ──
@@ -480,6 +486,34 @@ export interface KVOnboardingQuery {
     question: string; answer: string; source_decisions: string[]
     confidence: number; asked_by: string; date: string
 }
+export interface KVDecayItem {
+    module_id: string; module_label: string; last_validated: string
+    days_since_validated: number; decay_score: number; code_changes_since: number
+    owner: string; status: string
+}
+export interface KVInterviewSession {
+    id: string; senior_dev: string; module: string; status: string
+    scheduled_date: string; topics: string[]; decisions_captured: number
+    coverage_before: number; coverage_after: number
+}
+export interface KVTransferEntry {
+    from_dev: string; to_dev: string; module: string; progress: number
+    sessions_completed: number; sessions_total: number; last_session: string
+    status: string
+}
+export interface KVUndocumentedRegion {
+    code_path: string; complexity_score: number; lines: number
+    last_modified: string; modified_by: string; reason_suspected: string
+    priority: string
+}
+export interface KVOnboardingInsight {
+    question: string; ask_count: number; avg_confidence: number
+    has_documented_answer: boolean; gap_module: string; last_asked: string
+}
+export interface KVDecisionChainLink {
+    from_decision: string; to_decision: string; relationship: string
+    impact_radius: number; description: string
+}
 export interface KVDashboard {
     nodes: KVNode[]
     interview_history: KVInterviewMessage[]
@@ -488,6 +522,12 @@ export interface KVDashboard {
     recent_extractions: KVExtraction[]
     onboarding_queries: KVOnboardingQuery[]
     archaeology_results: KVArchaeologyResult[]
+    decay_items: KVDecayItem[]
+    interview_sessions: KVInterviewSession[]
+    transfer_matrix: KVTransferEntry[]
+    undocumented_regions: KVUndocumentedRegion[]
+    onboarding_insights: KVOnboardingInsight[]
+    decision_chains: KVDecisionChainLink[]
 }
 
 // ══════════════════════════════════════════════

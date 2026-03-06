@@ -3,7 +3,9 @@
 from app.models.knowledge_vault import (
     KnowledgeNode, InterviewMessage, ArchitecturalDecision,
     ArchaeologyResult, KnowledgeRiskScore, ReasoningExtraction,
-    OnboardingQuery,
+    OnboardingQuery, KnowledgeDecayItem, InterviewSession,
+    KnowledgeTransferEntry, UndocumentedRegion, OnboardingInsight,
+    DecisionChainLink,
 )
 
 NODES: list[KnowledgeNode] = [
@@ -212,3 +214,270 @@ ARCHAEOLOGY_RESULTS: list[ArchaeologyResult] = [
         confidence=92, code_path="src/search/indexer.ts",
     ),
 ]
+
+# ── Knowledge Decay Tracker ──
+
+DECAY_ITEMS: list[KnowledgeDecayItem] = [
+    KnowledgeDecayItem(
+        module_id="auth", module_label="Auth Module", last_validated="2025-12-10",
+        days_since_validated=86, decay_score=82, code_changes_since=14,
+        owner="Raj Kumar", status="critical",
+    ),
+    KnowledgeDecayItem(
+        module_id="reporting", module_label="Reporting Engine", last_validated="2025-11-05",
+        days_since_validated=121, decay_score=95, code_changes_since=22,
+        owner="Meera Joshi", status="critical",
+    ),
+    KnowledgeDecayItem(
+        module_id="search", module_label="Search Service", last_validated="2025-10-18",
+        days_since_validated=139, decay_score=98, code_changes_since=8,
+        owner="Raj Kumar", status="critical",
+    ),
+    KnowledgeDecayItem(
+        module_id="payment", module_label="Payment API", last_validated="2026-01-15",
+        days_since_validated=50, decay_score=45, code_changes_since=6,
+        owner="Priya Singh", status="aging",
+    ),
+    KnowledgeDecayItem(
+        module_id="notification", module_label="Notifications", last_validated="2026-01-22",
+        days_since_validated=43, decay_score=38, code_changes_since=4,
+        owner="Anika Patel", status="aging",
+    ),
+    KnowledgeDecayItem(
+        module_id="cache", module_label="Caching Layer", last_validated="2026-01-30",
+        days_since_validated=35, decay_score=30, code_changes_since=3,
+        owner="Raj Kumar", status="aging",
+    ),
+    KnowledgeDecayItem(
+        module_id="user", module_label="User Service", last_validated="2026-02-28",
+        days_since_validated=6, decay_score=5, code_changes_since=1,
+        owner="Raj Kumar", status="fresh",
+    ),
+    KnowledgeDecayItem(
+        module_id="ci", module_label="CI/CD Pipeline", last_validated="2026-02-14",
+        days_since_validated=20, decay_score=12, code_changes_since=2,
+        owner="David Chen", status="fresh",
+    ),
+]
+
+# ── Interview Session Planner ──
+
+INTERVIEW_SESSIONS: list[InterviewSession] = [
+    InterviewSession(
+        id="sess-001", senior_dev="Raj Kumar", module="Auth Module",
+        status="completed", scheduled_date="2026-02-15",
+        topics=["JWT design", "Redis session choice", "RBAC model"],
+        decisions_captured=3, coverage_before=40, coverage_after=85,
+    ),
+    InterviewSession(
+        id="sess-002", senior_dev="Raj Kumar", module="Search Service",
+        status="overdue", scheduled_date="2026-02-22",
+        topics=["Elasticsearch cluster design", "Index strategy", "Query optimization"],
+        decisions_captured=0, coverage_before=25, coverage_after=25,
+    ),
+    InterviewSession(
+        id="sess-003", senior_dev="Meera Joshi", module="Reporting Engine",
+        status="overdue", scheduled_date="2026-02-20",
+        topics=["Report generation architecture", "Queue-based processing", "Template engine"],
+        decisions_captured=0, coverage_before=15, coverage_after=15,
+    ),
+    InterviewSession(
+        id="sess-004", senior_dev="Priya Singh", module="Payment API",
+        status="scheduled", scheduled_date="2026-03-10",
+        topics=["Stripe integration patterns", "Webhook reliability", "Refund flow"],
+        decisions_captured=0, coverage_before=55, coverage_after=55,
+    ),
+    InterviewSession(
+        id="sess-005", senior_dev="Anika Patel", module="Notifications",
+        status="scheduled", scheduled_date="2026-03-12",
+        topics=["Event-driven architecture", "Multi-channel dispatch", "Retry strategy"],
+        decisions_captured=0, coverage_before=45, coverage_after=45,
+    ),
+    InterviewSession(
+        id="sess-006", senior_dev="David Chen", module="CI/CD Pipeline",
+        status="completed", scheduled_date="2026-02-10",
+        topics=["GitHub Actions vs Jenkins", "Deploy strategy", "Environment management"],
+        decisions_captured=2, coverage_before=60, coverage_after=90,
+    ),
+]
+
+# ── Knowledge Transfer Matrix ──
+
+TRANSFER_MATRIX: list[KnowledgeTransferEntry] = [
+    KnowledgeTransferEntry(
+        from_dev="Raj Kumar", to_dev="Alex (New)", module="Auth Module",
+        progress=70, sessions_completed=3, sessions_total=5,
+        last_session="2026-02-25", status="in-progress",
+    ),
+    KnowledgeTransferEntry(
+        from_dev="Raj Kumar", to_dev="Sam (New)", module="Search Service",
+        progress=15, sessions_completed=1, sessions_total=4,
+        last_session="2026-01-18", status="in-progress",
+    ),
+    KnowledgeTransferEntry(
+        from_dev="Raj Kumar", to_dev="Jordan (New)", module="Caching Layer",
+        progress=0, sessions_completed=0, sessions_total=3,
+        last_session="—", status="not-started",
+    ),
+    KnowledgeTransferEntry(
+        from_dev="Meera Joshi", to_dev="Alex (New)", module="Reporting Engine",
+        progress=0, sessions_completed=0, sessions_total=5,
+        last_session="—", status="not-started",
+    ),
+    KnowledgeTransferEntry(
+        from_dev="Priya Singh", to_dev="Sam (New)", module="Payment API",
+        progress=40, sessions_completed=2, sessions_total=4,
+        last_session="2026-02-14", status="in-progress",
+    ),
+    KnowledgeTransferEntry(
+        from_dev="David Chen", to_dev="Jordan (New)", module="CI/CD Pipeline",
+        progress=100, sessions_completed=3, sessions_total=3,
+        last_session="2026-02-28", status="completed",
+    ),
+    KnowledgeTransferEntry(
+        from_dev="Anika Patel", to_dev="Alex (New)", module="Notifications",
+        progress=30, sessions_completed=1, sessions_total=3,
+        last_session="2026-02-10", status="in-progress",
+    ),
+]
+
+# ── Undocumented Decision Detector ──
+
+UNDOCUMENTED_REGIONS: list[UndocumentedRegion] = [
+    UndocumentedRegion(
+        code_path="src/auth/oauth.ts", complexity_score=87, lines=340,
+        last_modified="2025-12-08", modified_by="Raj Kumar",
+        reason_suspected="Complex OAuth2 flow with custom token refresh — no decision record for provider choice",
+        priority="critical",
+    ),
+    UndocumentedRegion(
+        code_path="src/reports/aggregator.ts", complexity_score=92, lines=520,
+        last_modified="2025-11-01", modified_by="Meera Joshi",
+        reason_suspected="Multi-stage data aggregation pipeline with custom SQL — no documented reasoning for denormalization strategy",
+        priority="critical",
+    ),
+    UndocumentedRegion(
+        code_path="src/payments/refund.ts", complexity_score=74, lines=180,
+        last_modified="2026-01-10", modified_by="Priya Singh",
+        reason_suspected="Custom retry logic and partial refund handling — business rules not captured",
+        priority="high",
+    ),
+    UndocumentedRegion(
+        code_path="src/search/query.ts", complexity_score=78, lines=290,
+        last_modified="2025-10-15", modified_by="Raj Kumar",
+        reason_suspected="Custom ranking algorithm with boost factors — no documentation on why these weights were chosen",
+        priority="high",
+    ),
+    UndocumentedRegion(
+        code_path="src/notifications/sms.ts", complexity_score=55, lines=120,
+        last_modified="2026-01-20", modified_by="Anika Patel",
+        reason_suspected="SMS provider fallback chain (Twilio → SNS → Vonage) — selection criteria undocumented",
+        priority="medium",
+    ),
+    UndocumentedRegion(
+        code_path="src/reports/templates.ts", complexity_score=68, lines=410,
+        last_modified="2025-11-03", modified_by="Meera Joshi",
+        reason_suspected="Custom template engine instead of Handlebars — no decision record for build vs buy",
+        priority="high",
+    ),
+]
+
+# ── Onboarding Insights ──
+
+ONBOARDING_INSIGHTS: list[OnboardingInsight] = [
+    OnboardingInsight(
+        question="Why doesn't the auth system use cookies?",
+        ask_count=7, avg_confidence=96, has_documented_answer=True,
+        gap_module="Auth Module", last_asked="2026-02-28",
+    ),
+    OnboardingInsight(
+        question="Why not use Algolia for search?",
+        ask_count=5, avg_confidence=94, has_documented_answer=True,
+        gap_module="Search Service", last_asked="2026-02-25",
+    ),
+    OnboardingInsight(
+        question="Why is the report aggregation so complex?",
+        ask_count=4, avg_confidence=42, has_documented_answer=False,
+        gap_module="Reporting Engine", last_asked="2026-03-01",
+    ),
+    OnboardingInsight(
+        question="Why do we use 3 SMS providers in a fallback chain?",
+        ask_count=3, avg_confidence=35, has_documented_answer=False,
+        gap_module="Notifications", last_asked="2026-02-20",
+    ),
+    OnboardingInsight(
+        question="Why was the custom template engine built instead of using Handlebars?",
+        ask_count=3, avg_confidence=28, has_documented_answer=False,
+        gap_module="Reporting Engine", last_asked="2026-02-18",
+    ),
+    OnboardingInsight(
+        question="How does the RBAC system work?",
+        ask_count=6, avg_confidence=93, has_documented_answer=True,
+        gap_module="User Service", last_asked="2026-03-02",
+    ),
+    OnboardingInsight(
+        question="Why is the OAuth flow so complicated?",
+        ask_count=4, avg_confidence=30, has_documented_answer=False,
+        gap_module="Auth Module", last_asked="2026-02-27",
+    ),
+]
+
+# ── Decision Chain Links ──
+
+DECISION_CHAINS: list[DecisionChainLink] = [
+    DecisionChainLink(
+        from_decision="JWT for Stateless Authentication",
+        to_decision="Redis for Session & Cache Storage",
+        relationship="led-to", impact_radius=3,
+        description="Choosing JWT for auth created need for a separate cache for refresh tokens and rate limiting — Redis was selected for this role.",
+    ),
+    DecisionChainLink(
+        from_decision="Redis for Session & Cache Storage",
+        to_decision="Event-Driven Notification Architecture",
+        relationship="led-to", impact_radius=2,
+        description="Redis pub/sub was already available, enabling event-driven notification dispatch without adding a separate message broker.",
+    ),
+    DecisionChainLink(
+        from_decision="Elasticsearch for Full-Text Search",
+        to_decision="Server-Side Report Generation",
+        relationship="depends-on", impact_radius=2,
+        description="Report data aggregation queries rely on Elasticsearch indices for fast cross-module search during report generation.",
+    ),
+    DecisionChainLink(
+        from_decision="GitHub Actions over Jenkins for CI/CD",
+        to_decision="Role-Based Access Control (RBAC) Model",
+        relationship="depends-on", impact_radius=1,
+        description="CI/CD pipeline uses RBAC roles to determine who can trigger production deployments.",
+    ),
+    DecisionChainLink(
+        from_decision="JWT for Stateless Authentication",
+        to_decision="Role-Based Access Control (RBAC) Model",
+        relationship="led-to", impact_radius=4,
+        description="JWT tokens embed role claims, making RBAC checks a token-decode operation rather than a DB lookup — this shaped the entire auth architecture.",
+    ),
+    DecisionChainLink(
+        from_decision="Stripe over Adyen for Payments",
+        to_decision="Event-Driven Notification Architecture",
+        relationship="led-to", impact_radius=2,
+        description="Stripe webhooks are consumed as events in the notification system — payment confirmation triggers email/SMS via the same event bus.",
+    ),
+]
+
+
+def get_full_dashboard():
+    from app.models.knowledge_vault import KnowledgeVaultDashboard
+    return KnowledgeVaultDashboard(
+        nodes=NODES,
+        interview_history=INTERVIEW_HISTORY,
+        decisions=DECISIONS,
+        risk_score=RISK_SCORE,
+        recent_extractions=EXTRACTIONS,
+        onboarding_queries=ONBOARDING_QUERIES,
+        archaeology_results=ARCHAEOLOGY_RESULTS,
+        decay_items=DECAY_ITEMS,
+        interview_sessions=INTERVIEW_SESSIONS,
+        transfer_matrix=TRANSFER_MATRIX,
+        undocumented_regions=UNDOCUMENTED_REGIONS,
+        onboarding_insights=ONBOARDING_INSIGHTS,
+        decision_chains=DECISION_CHAINS,
+    )
