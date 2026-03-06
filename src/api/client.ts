@@ -164,6 +164,18 @@ export const debtRadarApi = {
     stagedFiles: () => fetchApi<StagedFile[]>('/debt-radar/staged-files'),
     survivalPredictions: () => fetchApi<SurvivalPrediction[]>('/debt-radar/survival-predictions'),
     budget: () => fetchApi<BudgetTracker>('/debt-radar/budget'),
+    scoreFile: (data: { ai_pct: number; churn_history: number; pattern_issues: number }) =>
+        fetchApi<ScoreFileResponse>('/debt-radar/score-file', {
+            method: 'POST', body: JSON.stringify(data),
+        }),
+    resolveRefactor: (index: number) =>
+        fetchApi<RefactorItem>(`/debt-radar/refactor-queue/${index}/resolve`, { method: 'POST' }),
+    updateBudgetSettings: (data: { ceiling?: number; alert_threshold?: number }) =>
+        fetchApi<BudgetTracker>('/debt-radar/budget/settings', {
+            method: 'PUT', body: JSON.stringify(data),
+        }),
+    rescan: () =>
+        fetchApi<StagedFile[]>('/debt-radar/rescan', { method: 'POST' }),
 }
 
 // ── Debt Radar types ──
@@ -185,6 +197,9 @@ export interface SurvivalPrediction {
 export interface BudgetTracker {
     ceiling: number; current: number; sprint_added: number; sprint_resolved: number
     trend: string; alert_threshold: number; weeks_to_breach: number
+}
+export interface ScoreFileResponse {
+    debt_score: number; verdict: string
 }
 export interface DebtRadarDashboard {
     modules: DebtModule[]

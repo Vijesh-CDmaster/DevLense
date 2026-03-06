@@ -3,7 +3,7 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line,
     AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PieChart, Pie, Cell, Legend,
 } from 'recharts'
-import { AlertTriangle, Shield, TrendingUp, TrendingDown, Download, Zap } from 'lucide-react'
+import { AlertTriangle, Shield, TrendingUp, TrendingDown, Download, Zap, RefreshCw } from 'lucide-react'
 import { debtRadarApi, type DebtRadarDashboard } from '../api/client'
 
 const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
@@ -61,7 +61,10 @@ export default function DebtRadar() {
                         AI-Induced Technical Debt — catch it before it reaches production
                     </p>
                 </div>
-                <button className="btn-primary">
+                <button className="btn-primary" onClick={() => {
+                    const blob = new Blob([JSON.stringify({ modules, sprintDebt, refactorQueue, stagedFiles, survivalPredictions, budgetTracker }, null, 2)], { type: 'application/json' })
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'debt-report.json'; a.click()
+                }}>
                     <Download size={13} /> Export Debt Report
                 </button>
             </div>
@@ -106,7 +109,14 @@ export default function DebtRadar() {
                             </p>
                         </div>
                     </div>
-                    <span className="badge-amber">{stagedFiles.filter(s => s.verdict === 'block').length} blocked · {stagedFiles.filter(s => s.verdict === 'warn').length} warnings</span>
+                    <div className="flex items-center gap-2">
+                        <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 11 }} onClick={() => {
+                            debtRadarApi.rescan().then(setStagedFiles).catch(() => {})
+                        }}>
+                            <RefreshCw size={11} /> Rescan
+                        </button>
+                        <span className="badge-amber">{stagedFiles.filter(s => s.verdict === 'block').length} blocked · {stagedFiles.filter(s => s.verdict === 'warn').length} warnings</span>
+                    </div>
                 </div>
                 <div className="space-y-3">
                     {stagedFiles.map((s, i) => {
@@ -340,7 +350,20 @@ export default function DebtRadar() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)', border: '1px solid #1E2D4A' }}>
                                 <span className="text-xs" style={{ color: '#94A3B8' }}>Alert Threshold</span>
-                                <span className="text-sm font-bold" style={{ color: budgetPct >= budgetTracker.alert_threshold ? '#EF4444' : '#F59E0B' }}>{budgetTracker.alert_threshold}%</span>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type="number" min={50} max={100}
+                                        className="w-14 text-sm font-bold text-right bg-transparent border-b border-slate-600 focus:border-cyan-400 outline-none"
+                                        style={{ color: budgetPct >= budgetTracker.alert_threshold ? '#EF4444' : '#F59E0B' }}
+                                        value={budgetTracker.alert_threshold}
+                                        onChange={(e) => {
+                                            const val = parseInt(e.target.value)
+                                            if (!isNaN(val)) setBudgetTracker(prev => ({ ...prev, alert_threshold: val }))
+                                        }}
+                                        onBlur={() => debtRadarApi.updateBudgetSettings({ alert_threshold: budgetTracker.alert_threshold }).catch(() => {})}
+                                    />
+                                    <span className="text-xs" style={{ color: '#94A3B8' }}>%</span>
+                                </div>
                             </div>
                             <div className="flex items-center justify-between p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)', border: '1px solid #1E2D4A' }}>
                                 <span className="text-xs" style={{ color: '#94A3B8' }}>Current Usage</span>
@@ -401,7 +424,16 @@ export default function DebtRadar() {
                                         <span>📉 Debt reduction: <span className="font-bold" style={{ color: '#10B981' }}>-{item.debt_reduction}pts</span></span>
                                     </div>
                                 </div>
-                                <button className="btn-primary shrink-0">Fix This</button>
+                                <button className="btn-primary shrink-0" onClick={() => {
+                                    debtRadarApi.resolveRefactor(i).then((resolved) => {
+                                        setRefactorQueue(prev => prev.filter((_, idx) => idx !== i))
+                                        setBudgetTracker(prev => ({
+                                            ...prev,
+                                            current: Math.max(0, prev.current - resolved.debt_reduction),
+                                            sprint_resolved: prev.sprint_resolved + resolved.debt_reduction,
+                                        }))
+                                    }).catch(() => {})
+                                }}>Fix This</button>
                             </div>
                         </div>
                     ))}

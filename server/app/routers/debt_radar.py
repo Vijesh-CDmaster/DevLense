@@ -1,16 +1,18 @@
 """Debt Radar API router — /api/debt-radar/*."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.models.debt_radar import (
     DebtRadarDashboard,
     DebtModule, SprintDebt, RefactorItem,
     StagedFile, SurvivalPrediction, BudgetTracker,
+    ScoreFileRequest, ScoreFileResponse, BudgetSettingsRequest,
 )
 from app.data.debt_radar_data import (
     get_full_dashboard,
     get_modules, get_sprint_debt, get_refactor_queue,
     get_staged_files, get_survival_predictions, get_budget_tracker,
+    resolve_refactor_item, update_budget_settings,
 )
 from app.services import debt_scorer
 
@@ -65,3 +67,36 @@ async def survival_predictions():
 @router.get("/budget", response_model=BudgetTracker)
 async def budget():
     return get_budget_tracker()
+
+
+# ── Score a single file (exposes compute_debt_score) ──
+
+@router.post("/score-file", response_model=ScoreFileResponse)
+async def score_file(req: ScoreFileRequest):
+    score = await debt_scorer.compute_debt_score(req.ai_pct, req.churn_history, req.pattern_issues)
+    verdict = "block" if score >= 200 else "warn" if score >= 100 else "pass"
+    return ScoreFileResponse(debt_score=score, verdict=verdict)
+
+
+# ── Resolve / acknowledge a refactor item ──
+
+@router.post("/refactor-queue/{index}/resolve", response_model=RefactorItem)
+async def resolve_refactor(index: int):
+    item = resolve_refactor_item(index)
+    if item is None:
+        raise HTTPException(status_code=404, detail="Refactor item not found")
+    return item
+
+
+# ── Update budget ceiling / alert threshold ──
+
+@router.put("/budget/settings", response_model=BudgetTracker)
+async def budget_settings(req: BudgetSettingsRequest):
+    return update_budget_settings(req.ceiling, req.alert_threshold)
+
+
+# ── Rescan staged files ──
+
+@router.post("/rescan", response_model=list[StagedFile])
+async def rescan():
+    return await debt_scorer.score_staged_files()

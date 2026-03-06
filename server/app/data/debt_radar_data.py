@@ -172,3 +172,23 @@ def get_survival_predictions() -> list[SurvivalPrediction]:
 
 def get_budget_tracker() -> BudgetTracker:
     return _budget_tracker
+
+
+def resolve_refactor_item(index: int) -> RefactorItem | None:
+    """Mark a refactor item as resolved and decrease budget current by its debt_reduction."""
+    if 0 <= index < len(_refactor_queue):
+        item = _refactor_queue.pop(index)
+        _budget_tracker.current = max(0, _budget_tracker.current - item.debt_reduction)
+        _budget_tracker.sprint_resolved += item.debt_reduction
+        return item
+    return None
+
+
+def update_budget_settings(ceiling: int | None, alert_threshold: int | None) -> BudgetTracker:
+    """Update budget ceiling and/or alert threshold."""
+    global _budget_tracker
+    if ceiling is not None:
+        _budget_tracker = _budget_tracker.model_copy(update={"ceiling": ceiling})
+    if alert_threshold is not None:
+        _budget_tracker = _budget_tracker.model_copy(update={"alert_threshold": alert_threshold})
+    return _budget_tracker

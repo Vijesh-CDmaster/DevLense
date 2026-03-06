@@ -67,6 +67,24 @@ class BudgetTracker(BaseModel):
     weeks_to_breach: int
 
 
+# ── Request / response helpers ──
+
+class ScoreFileRequest(BaseModel):
+    ai_pct: int
+    churn_history: float
+    pattern_issues: int
+
+
+class ScoreFileResponse(BaseModel):
+    debt_score: int
+    verdict: str
+
+
+class BudgetSettingsRequest(BaseModel):
+    ceiling: int | None = None
+    alert_threshold: int | None = None
+
+
 # ── Composite Dashboard ──
 
 class DebtRadarDashboard(BaseModel):
