@@ -346,3 +346,56 @@ export interface LeadershipDashboard {
     pulse_results: LVPulseResult[]
     empathy_score: LVEmpathyScore
 }
+
+// ── Knowledge Vault API ──
+
+export const knowledgeVaultApi = {
+    dashboard: () => fetchApi<KVDashboard>('/knowledge-vault/dashboard'),
+    nodes: () => fetchApi<KVNode[]>('/knowledge-vault/nodes'),
+    interviews: () => fetchApi<KVInterviewMessage[]>('/knowledge-vault/interviews'),
+    decisions: () => fetchApi<KVDecision[]>('/knowledge-vault/decisions'),
+    riskScore: () => fetchApi<KVRiskScore>('/knowledge-vault/risk-score'),
+    extractions: () => fetchApi<KVExtraction[]>('/knowledge-vault/extractions'),
+    onboarding: () => fetchApi<KVOnboardingQuery[]>('/knowledge-vault/onboarding'),
+    archaeology: () => fetchApi<KVArchaeologyResult[]>('/knowledge-vault/archaeology'),
+    busFactor: () => fetchApi<{ module: string; owners: number; risk: string }[]>('/knowledge-vault/bus-factor'),
+}
+
+// ── Knowledge Vault types ──
+
+export interface KVNode {
+    id: string; label: string; risk: string; owners: number
+    decisions: number; code_regions: string[]; last_updated: string
+}
+export interface KVInterviewMessage {
+    role: string; msg: string; timestamp: string; decision_extracted: boolean
+}
+export interface KVDecision {
+    id: string; title: string; reasoning: string; alternatives_rejected: string[]
+    author: string; date: string; code_region: string; tags: string[]
+}
+export interface KVArchaeologyResult {
+    query: string; answer: string; author: string; date: string
+    decision_id: string; confidence: number; code_path: string
+}
+export interface KVRiskScore {
+    overall_score: number; high_risk_count: number; medium_risk_count: number
+    safe_count: number; bus_factor_alerts: string[]
+}
+export interface KVExtraction {
+    id: string; code_region: string; decision: string; why: string
+    alternatives: string[]; trade_offs: string; author: string; date: string
+}
+export interface KVOnboardingQuery {
+    question: string; answer: string; source_decisions: string[]
+    confidence: number; asked_by: string; date: string
+}
+export interface KVDashboard {
+    nodes: KVNode[]
+    interview_history: KVInterviewMessage[]
+    decisions: KVDecision[]
+    risk_score: KVRiskScore
+    recent_extractions: KVExtraction[]
+    onboarding_queries: KVOnboardingQuery[]
+    archaeology_results: KVArchaeologyResult[]
+}
