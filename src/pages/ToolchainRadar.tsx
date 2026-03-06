@@ -1,10 +1,15 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { ArrowRight, Clock, Shuffle } from 'lucide-react'
+import {
+    toolchainRadarApi,
+    type TCDeveloper, type TCTransition, type TCHourlySlot,
+    type TCFrictionByTask, type TCToolUsage,
+} from '../api/client'
 
-/* ─── mock data ─── */
+/* ─── tool brand colours ─── */
 
 const toolColors: Record<string, string> = {
     Copilot: '#10B981',
@@ -12,59 +17,26 @@ const toolColors: Record<string, string> = {
     'Claude Code': '#00D4FF',
 }
 
-const developers = [
-    {
-        name: 'Raj Kumar',
-        switches: 47,
-        timeLost: 2.4,
-        primary: 'Cursor',
-        topFriction: 'Cursor → Claude Code',
-        alert: true,
-    },
-    {
-        name: 'Priya S.',
-        switches: 31,
-        timeLost: 1.6,
-        primary: 'Copilot',
-        topFriction: 'Copilot → Cursor',
-        alert: false,
-    },
-    {
-        name: 'Arjun M.',
-        switches: 22,
-        timeLost: 0.9,
-        primary: 'Copilot',
-        topFriction: 'Copilot → Claude Code',
-        alert: false,
-    },
-    {
-        name: 'Meena R.',
-        switches: 12,
-        timeLost: 0.4,
-        primary: 'Claude Code',
-        topFriction: 'Claude Code → Copilot',
-        alert: false,
-    },
-    {
-        name: 'Dev K.',
-        switches: 54,
-        timeLost: 3.1,
-        primary: 'Cursor',
-        topFriction: 'Cursor → Copilot',
-        alert: true,
-    },
+/* ─── fallback data (shown while API loads) ─── */
+
+const fallbackDevs: TCDeveloper[] = [
+    { name: 'Raj Kumar', switches: 47, time_lost: 2.4, primary: 'Cursor', top_friction: 'Cursor → Claude Code', alert: true },
+    { name: 'Priya S.', switches: 31, time_lost: 1.6, primary: 'Copilot', top_friction: 'Copilot → Cursor', alert: false },
+    { name: 'Arjun M.', switches: 22, time_lost: 0.9, primary: 'Copilot', top_friction: 'Copilot → Claude Code', alert: false },
+    { name: 'Meena R.', switches: 12, time_lost: 0.4, primary: 'Claude Code', top_friction: 'Claude Code → Copilot', alert: false },
+    { name: 'Dev K.', switches: 54, time_lost: 3.1, primary: 'Cursor', top_friction: 'Cursor → Copilot', alert: true },
 ]
 
-const transitionMatrix = [
-    { from: 'Copilot', to: 'Cursor', switches: 38, avgMinLost: 4.2 },
-    { from: 'Copilot', to: 'Claude Code', switches: 26, avgMinLost: 5.8 },
-    { from: 'Cursor', to: 'Copilot', switches: 34, avgMinLost: 3.9 },
-    { from: 'Cursor', to: 'Claude Code', switches: 52, avgMinLost: 6.1 },
-    { from: 'Claude Code', to: 'Copilot', switches: 19, avgMinLost: 3.4 },
-    { from: 'Claude Code', to: 'Cursor', switches: 21, avgMinLost: 4.7 },
+const fallbackTransitions: TCTransition[] = [
+    { from_tool: 'Copilot', to_tool: 'Cursor', switches: 38, avg_min_lost: 4.2 },
+    { from_tool: 'Copilot', to_tool: 'Claude Code', switches: 26, avg_min_lost: 5.8 },
+    { from_tool: 'Cursor', to_tool: 'Copilot', switches: 34, avg_min_lost: 3.9 },
+    { from_tool: 'Cursor', to_tool: 'Claude Code', switches: 52, avg_min_lost: 6.1 },
+    { from_tool: 'Claude Code', to_tool: 'Copilot', switches: 19, avg_min_lost: 3.4 },
+    { from_tool: 'Claude Code', to_tool: 'Cursor', switches: 21, avg_min_lost: 4.7 },
 ]
 
-const hourlyTimeline = [
+const fallbackHourly: TCHourlySlot[] = [
     { hour: '9 AM', copilot: 12, cursor: 3, claude: 1 },
     { hour: '10 AM', copilot: 8, cursor: 9, claude: 4 },
     { hour: '11 AM', copilot: 4, cursor: 14, claude: 7 },
@@ -76,28 +48,44 @@ const hourlyTimeline = [
     { hour: '5 PM', copilot: 5, cursor: 7, claude: 9 },
 ]
 
-const frictionByTask = [
-    { task: 'Debugging', minutesLost: 8.2, switches: 14, worstTransition: 'Cursor → Claude Code' },
-    { task: 'Feature Code', minutesLost: 6.5, switches: 11, worstTransition: 'Copilot → Cursor' },
-    { task: 'Code Review', minutesLost: 5.1, switches: 9, worstTransition: 'Claude Code → Copilot' },
-    { task: 'Refactoring', minutesLost: 4.3, switches: 7, worstTransition: 'Cursor → Copilot' },
-    { task: 'Tests', minutesLost: 2.8, switches: 4, worstTransition: 'Copilot → Claude Code' },
+const fallbackFriction: TCFrictionByTask[] = [
+    { task: 'Debugging', minutes_lost: 8.2, switches: 14, worst_transition: 'Cursor → Claude Code' },
+    { task: 'Feature Code', minutes_lost: 6.5, switches: 11, worst_transition: 'Copilot → Cursor' },
+    { task: 'Code Review', minutes_lost: 5.1, switches: 9, worst_transition: 'Claude Code → Copilot' },
+    { task: 'Refactoring', minutes_lost: 4.3, switches: 7, worst_transition: 'Cursor → Copilot' },
+    { task: 'Tests', minutes_lost: 2.8, switches: 4, worst_transition: 'Copilot → Claude Code' },
 ]
 
-const toolUsage = [
+const fallbackToolUsage: TCToolUsage[] = [
     { tool: 'GitHub Copilot', pct: 42, accepts: 68, quality: 71, color: '#10B981' },
     { tool: 'Cursor', pct: 35, accepts: 74, quality: 63, color: '#7C3AED' },
     { tool: 'Claude Code', pct: 23, accepts: 81, quality: 79, color: '#00D4FF' },
 ]
 
-const maxMinLost = Math.max(...transitionMatrix.map((t) => t.avgMinLost))
-
 export default function ToolchainRadar() {
     const [selectedDev, setSelectedDev] = useState(0)
+    const [developers, setDevelopers] = useState<TCDeveloper[]>(fallbackDevs)
+    const [transitionMatrix, setTransitionMatrix] = useState<TCTransition[]>(fallbackTransitions)
+    const [hourlyTimeline, setHourlyTimeline] = useState<TCHourlySlot[]>(fallbackHourly)
+    const [frictionByTask, setFrictionByTask] = useState<TCFrictionByTask[]>(fallbackFriction)
+    const [toolUsage, setToolUsage] = useState<TCToolUsage[]>(fallbackToolUsage)
+
+    useEffect(() => {
+        toolchainRadarApi.dashboard().then((data) => {
+            setDevelopers(data.developers)
+            setTransitionMatrix(data.transition_matrix)
+            setHourlyTimeline(data.hourly_timeline)
+            setFrictionByTask(data.friction_by_task)
+            setToolUsage(data.tool_usage)
+        }).catch(() => { /* keep fallback data */ })
+    }, [])
+
     const dev = developers[selectedDev]
+    const maxMinLost = Math.max(...transitionMatrix.map((t) => t.avg_min_lost))
 
     const totalSwitches = developers.reduce((s, d) => s + d.switches, 0)
-    const totalTimeLost = developers.reduce((s, d) => s + d.timeLost, 0)
+    const totalTimeLost = developers.reduce((s, d) => s + d.time_lost, 0)
+    const costliest = [...transitionMatrix].sort((a, b) => b.avg_min_lost - a.avg_min_lost)[0]
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -136,10 +124,10 @@ export default function ToolchainRadar() {
                 <div className="glass-card p-5 text-center">
                     <p className="section-title">Costliest Transition</p>
                     <p className="text-lg font-black mt-3" style={{ color: '#7C3AED' }}>
-                        Cursor → Claude
+                        {costliest?.from_tool} → {costliest?.to_tool}
                     </p>
                     <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
-                        6.1 min avg recovery
+                        {costliest?.avg_min_lost} min avg recovery
                     </p>
                 </div>
                 <div className="glass-card p-5 text-center">
@@ -175,10 +163,10 @@ export default function ToolchainRadar() {
                 </p>
 
                 <div className="grid grid-cols-3 gap-3">
-                    {transitionMatrix
-                        .sort((a, b) => b.avgMinLost - a.avgMinLost)
+                    {[...transitionMatrix]
+                        .sort((a, b) => b.avg_min_lost - a.avg_min_lost)
                         .map((t) => {
-                            const intensity = t.avgMinLost / maxMinLost
+                            const intensity = t.avg_min_lost / maxMinLost
                             const bg =
                                 intensity > 0.8
                                     ? 'rgba(239,68,68,0.18)'
@@ -200,7 +188,7 @@ export default function ToolchainRadar() {
 
                             return (
                                 <div
-                                    key={`${t.from}-${t.to}`}
+                                    key={`${t.from_tool}-${t.to_tool}`}
                                     className="p-4 rounded-xl transition-all hover:scale-[1.02]"
                                     style={{ background: bg, border: `1px solid ${borderColor}` }}
                                 >
@@ -208,25 +196,25 @@ export default function ToolchainRadar() {
                                         <span
                                             className="text-xs font-bold px-1.5 py-0.5 rounded"
                                             style={{
-                                                background: `${toolColors[t.from]}22`,
-                                                color: toolColors[t.from],
+                                                background: `${toolColors[t.from_tool]}22`,
+                                                color: toolColors[t.from_tool],
                                             }}
                                         >
-                                            {t.from}
+                                            {t.from_tool}
                                         </span>
                                         <ArrowRight size={12} style={{ color: '#94A3B8' }} />
                                         <span
                                             className="text-xs font-bold px-1.5 py-0.5 rounded"
                                             style={{
-                                                background: `${toolColors[t.to]}22`,
-                                                color: toolColors[t.to],
+                                                background: `${toolColors[t.to_tool]}22`,
+                                                color: toolColors[t.to_tool],
                                             }}
                                         >
-                                            {t.to}
+                                            {t.to_tool}
                                         </span>
                                     </div>
                                     <p className="text-2xl font-black" style={{ color: valueColor }}>
-                                        {t.avgMinLost}m
+                                        {t.avg_min_lost}m
                                     </p>
                                     <p className="text-xs" style={{ color: '#94A3B8' }}>
                                         avg recovery · {t.switches} switches today
@@ -255,11 +243,11 @@ export default function ToolchainRadar() {
                     </h3>
                     <div className="space-y-2">
                         {developers.map((d, i) => {
-                            const pct = Math.min((d.timeLost / 3.5) * 100, 100)
+                            const pct = Math.min((d.time_lost / 3.5) * 100, 100)
                             const barColor =
-                                d.timeLost >= 2.0
+                                d.time_lost >= 2.0
                                     ? '#EF4444'
-                                    : d.timeLost >= 1.0
+                                    : d.time_lost >= 1.0
                                         ? '#F59E0B'
                                         : '#10B981'
                             return (
@@ -298,7 +286,7 @@ export default function ToolchainRadar() {
                                             className="text-sm font-bold"
                                             style={{ color: barColor }}
                                         >
-                                            -{d.timeLost}h
+                                            -{d.time_lost}h
                                         </span>
                                     </div>
                                     <div className="progress-bar">
@@ -339,10 +327,10 @@ export default function ToolchainRadar() {
                             <p
                                 className="text-xl font-black"
                                 style={{
-                                    color: dev.timeLost >= 2 ? '#EF4444' : '#F59E0B',
+                                    color: dev.time_lost >= 2 ? '#EF4444' : '#F59E0B',
                                 }}
                             >
-                                {dev.timeLost}h
+                                {dev.time_lost}h
                             </p>
                             <p className="text-xs" style={{ color: '#94A3B8' }}>
                                 Daily time lost
@@ -383,7 +371,7 @@ export default function ToolchainRadar() {
                                 border: '1px solid rgba(239,68,68,0.2)',
                             }}
                         >
-                            <p className="text-sm font-bold text-white">{dev.topFriction}</p>
+                            <p className="text-sm font-bold text-white">{dev.top_friction}</p>
                             <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
                                 Accounts for ~40% of this developer's switching overhead
                             </p>
@@ -487,11 +475,11 @@ export default function ToolchainRadar() {
                     </p>
                     <div className="space-y-3">
                         {frictionByTask.map((f) => {
-                            const pct = Math.min((f.minutesLost / 10) * 100, 100)
+                            const pct = Math.min((f.minutes_lost / 10) * 100, 100)
                             const barColor =
-                                f.minutesLost > 6
+                                f.minutes_lost > 6
                                     ? '#EF4444'
-                                    : f.minutesLost > 4
+                                    : f.minutes_lost > 4
                                         ? '#F59E0B'
                                         : '#10B981'
                             return (
@@ -499,7 +487,7 @@ export default function ToolchainRadar() {
                                     <div className="flex justify-between text-xs mb-1.5">
                                         <span style={{ color: '#94A3B8' }}>{f.task}</span>
                                         <span className="font-bold" style={{ color: barColor }}>
-                                            {f.minutesLost}m lost · {f.switches} switches
+                                            {f.minutes_lost}m lost · {f.switches} switches
                                         </span>
                                     </div>
                                     <div className="progress-bar">
@@ -515,7 +503,7 @@ export default function ToolchainRadar() {
                                         className="text-xs mt-0.5"
                                         style={{ color: '#94A3B8', fontSize: 10 }}
                                     >
-                                        Worst: {f.worstTransition}
+                                        Worst: {f.worst_transition}
                                     </p>
                                 </div>
                             )

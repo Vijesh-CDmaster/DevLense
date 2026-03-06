@@ -399,3 +399,42 @@ export interface KVDashboard {
     onboarding_queries: KVOnboardingQuery[]
     archaeology_results: KVArchaeologyResult[]
 }
+
+// ══════════════════════════════════════════════
+// Toolchain Radar (Problem 7 — Fragmented Toolchains)
+// ══════════════════════════════════════════════
+
+export const toolchainRadarApi = {
+    dashboard: () => fetchApi<ToolchainRadarDashboard>('/toolchain-radar/dashboard'),
+    developers: () => fetchApi<TCDeveloper[]>('/toolchain-radar/developers'),
+    transitions: () => fetchApi<TCTransition[]>('/toolchain-radar/transitions'),
+    hourlyTimeline: () => fetchApi<TCHourlySlot[]>('/toolchain-radar/hourly-timeline'),
+    frictionByTask: () => fetchApi<TCFrictionByTask[]>('/toolchain-radar/friction-by-task'),
+    toolUsage: () => fetchApi<TCToolUsage[]>('/toolchain-radar/tool-usage'),
+}
+
+// ── Toolchain Radar types ──
+
+export interface TCDeveloper {
+    name: string; switches: number; time_lost: number
+    primary: string; top_friction: string; alert: boolean
+}
+export interface TCTransition {
+    from_tool: string; to_tool: string; switches: number; avg_min_lost: number
+}
+export interface TCHourlySlot {
+    hour: string; copilot: number; cursor: number; claude: number
+}
+export interface TCFrictionByTask {
+    task: string; minutes_lost: number; switches: number; worst_transition: string
+}
+export interface TCToolUsage {
+    tool: string; pct: number; accepts: number; quality: number; color: string
+}
+export interface ToolchainRadarDashboard {
+    developers: TCDeveloper[]
+    transition_matrix: TCTransition[]
+    hourly_timeline: TCHourlySlot[]
+    friction_by_task: TCFrictionByTask[]
+    tool_usage: TCToolUsage[]
+}
