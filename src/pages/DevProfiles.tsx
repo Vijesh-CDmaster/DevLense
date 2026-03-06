@@ -101,7 +101,10 @@ export default function DevProfiles() {
                         Seniority-aware AI adaptation — different developers need different AI modes
                     </p>
                 </div>
-                <button className="btn-primary">
+                <button className="btn-primary" onClick={() => {
+                    const blob = new Blob([JSON.stringify({ developers, curveData, timelineData, benefitHarmData, productivityTimeline, reverseAlerts, trustScores }, null, 2)], { type: 'application/json' })
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dev-profile-report.json'; a.click()
+                }}>
                     <Download size={13} /> Export Profile Report
                 </button>
             </div>
@@ -210,6 +213,13 @@ export default function DevProfiles() {
                                 {['Scaffold', 'Standard', 'Architect'].map((mode) => (
                                     <button
                                         key={mode}
+                                        onClick={() => {
+                                            devProfilesApi.switchMode(dev.name, mode).then((updated) => {
+                                                setDevelopers(prev => prev.map((d, idx) =>
+                                                    idx === selected ? { ...d, mode: updated.mode } : d
+                                                ))
+                                            }).catch(() => {})
+                                        }}
                                         className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all"
                                         style={{
                                             background: dev.mode === mode ? `${modeColors[mode]}22` : 'rgba(30,45,74,0.5)',
@@ -359,7 +369,19 @@ export default function DevProfiles() {
                                         <div className="progress-fill" style={{ width: `${ts.trustScore}%`, background: `linear-gradient(90deg, ${tsColor}88, ${tsColor})` }} />
                                     </div>
                                     <span className="text-sm font-black" style={{ color: tsColor }}>{ts.trustScore}%</span>
-                                    <span className="text-xs" style={{ color: '#94A3B8' }}>/ {ts.threshold}% threshold</span>
+                                    <span className="text-xs" style={{ color: '#94A3B8' }}>/ </span>
+                                    <input
+                                        type="number" min={30} max={100}
+                                        className="w-12 text-xs font-bold text-right bg-transparent border-b border-slate-600 focus:border-cyan-400 outline-none"
+                                        style={{ color: '#94A3B8' }}
+                                        value={ts.threshold}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value)
+                                            if (!isNaN(val)) setTrustScores(prev => prev.map((s, j) => j === i ? { ...s, threshold: val } : s))
+                                        }}
+                                        onBlur={() => devProfilesApi.updateTrustThreshold(ts.dev, ts.threshold).catch(() => {})}
+                                    />
+                                    <span className="text-xs" style={{ color: '#94A3B8' }}>% threshold</span>
                                 </div>
                             </div>
                         )
@@ -427,6 +449,17 @@ export default function DevProfiles() {
                                     <span>AI time lost: <span className="font-bold text-red-400">{alert.aiTimeLost}h</span></span>
                                     <span>Manual estimate: <span className="font-bold text-emerald-400">{alert.manualEstimate}h</span></span>
                                     <span>{alert.triggered}</span>
+                                    <button
+                                        className="ml-auto text-xs px-2 py-1 rounded font-semibold"
+                                        style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid rgba(16,185,129,0.2)' }}
+                                        onClick={() => {
+                                            devProfilesApi.acknowledgeAlert(i).then(() => {
+                                                setReverseAlerts(prev => prev.filter((_, idx) => idx !== i))
+                                            }).catch(() => {})
+                                        }}
+                                    >
+                                        Acknowledge
+                                    </button>
                                 </div>
                             </div>
                         ))}

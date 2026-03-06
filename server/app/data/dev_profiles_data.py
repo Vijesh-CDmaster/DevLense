@@ -145,3 +145,29 @@ def get_full_dashboard() -> DevProfilesDashboard:
         reverse_alerts=REVERSE_ALERTS,
         trust_scores=TRUST_SCORES,
     )
+
+
+def switch_mode(dev_name: str, mode: str) -> Developer | None:
+    """Switch AI suggestion mode for a developer and return updated dev."""
+    for dev in DEVELOPERS:
+        if dev.name == dev_name:
+            idx = DEVELOPERS.index(dev)
+            DEVELOPERS[idx] = dev.model_copy(update={"mode": mode})
+            return DEVELOPERS[idx]
+    return None
+
+
+def acknowledge_alert(index: int) -> ReverseAlert | None:
+    """Remove an acknowledged reverse mentoring alert."""
+    if 0 <= index < len(REVERSE_ALERTS):
+        return REVERSE_ALERTS.pop(index)
+    return None
+
+
+def update_trust_threshold(dev_name: str, threshold: float) -> TrustScore | None:
+    """Update trust threshold for a specific developer."""
+    for i, ts in enumerate(TRUST_SCORES):
+        if ts.dev == dev_name:
+            TRUST_SCORES[i] = ts.model_copy(update={"threshold": threshold})
+            return TRUST_SCORES[i]
+    return None

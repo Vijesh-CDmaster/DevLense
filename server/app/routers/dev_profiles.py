@@ -1,8 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from app.data.dev_profiles_data import (
     get_full_dashboard, DEVELOPERS, BENEFIT_CURVE, IMPACT_TIMELINE,
     BENEFIT_HARM, PRODUCTIVITY_TIMELINES, REVERSE_ALERTS, TRUST_SCORES,
+    switch_mode, acknowledge_alert, update_trust_threshold,
 )
+from app.models.dev_profiles import SwitchModeRequest, UpdateTrustThresholdRequest
 from app.services.seniority_detector import detect_seniority_level, compute_ai_impact, get_optimal_mode
 
 router = APIRouter(prefix="/api/dev-profiles", tags=["dev-profiles"])
@@ -63,3 +65,29 @@ def ai_impact(dev_name: str):
 def optimal_mode(dev_name: str):
     mode = get_optimal_mode(dev_name)
     return {"dev": dev_name, "recommended_mode": mode}
+
+
+@router.put("/developers/{dev_name}/mode")
+def set_mode(dev_name: str, req: SwitchModeRequest):
+    if req.mode not in ("Scaffold", "Standard", "Architect"):
+        raise HTTPException(status_code=400, detail="Mode must be Scaffold, Standard, or Architect")
+    dev = switch_mode(dev_name, req.mode)
+    if dev is None:
+        raise HTTPException(status_code=404, detail="Developer not found")
+    return dev
+
+
+@router.post("/reverse-alerts/{index}/acknowledge")
+def ack_alert(index: int):
+    alert = acknowledge_alert(index)
+    if alert is None:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"acknowledged": True, "alert": alert}
+
+
+@router.put("/trust-scores/{dev_name}/threshold")
+def set_trust_threshold(dev_name: str, req: UpdateTrustThresholdRequest):
+    ts = update_trust_threshold(dev_name, req.threshold)
+    if ts is None:
+        raise HTTPException(status_code=404, detail="Developer not found")
+    return ts

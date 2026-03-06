@@ -223,6 +223,22 @@ export const devProfilesApi = {
     productivityTimelines: () => fetchApi<DevProductivityTimeline[]>('/dev-profiles/productivity-timelines'),
     reverseAlerts: () => fetchApi<ReverseAlert[]>('/dev-profiles/reverse-alerts'),
     trustScores: () => fetchApi<DevTrustScore[]>('/dev-profiles/trust-scores'),
+    detectSeniority: (commits: number, prComplexity: string, yearsExp: number) =>
+        fetchApi<{ seniority: string }>(`/dev-profiles/detect-seniority?commits=${commits}&pr_complexity=${encodeURIComponent(prComplexity)}&years_exp=${yearsExp}`),
+    aiImpact: (devName: string) =>
+        fetchApi<{ net_impact: number; recommendation: string }>(`/dev-profiles/ai-impact/${encodeURIComponent(devName)}`),
+    optimalMode: (devName: string) =>
+        fetchApi<{ dev: string; recommended_mode: string }>(`/dev-profiles/optimal-mode/${encodeURIComponent(devName)}`),
+    switchMode: (devName: string, mode: string) =>
+        fetchApi<DevProfileDeveloper>(`/dev-profiles/developers/${encodeURIComponent(devName)}/mode`, {
+            method: 'PUT', body: JSON.stringify({ mode }),
+        }),
+    acknowledgeAlert: (index: number) =>
+        fetchApi<{ acknowledged: boolean }>(`/dev-profiles/reverse-alerts/${index}/acknowledge`, { method: 'POST' }),
+    updateTrustThreshold: (devName: string, threshold: number) =>
+        fetchApi<DevTrustScore>(`/dev-profiles/trust-scores/${encodeURIComponent(devName)}/threshold`, {
+            method: 'PUT', body: JSON.stringify({ threshold }),
+        }),
 }
 
 // ── Dev Profiles types ──

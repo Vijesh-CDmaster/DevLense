@@ -67,3 +67,11 @@ class DevProfilesDashboard(BaseModel):
     productivity_timelines: list[ProductivityTimeline]
     reverse_alerts: list[ReverseAlert]
     trust_scores: list[TrustScore]
+
+
+class SwitchModeRequest(BaseModel):
+    mode: str  # "Scaffold" | "Standard" | "Architect"
+
+
+class UpdateTrustThresholdRequest(BaseModel):
+    threshold: float
