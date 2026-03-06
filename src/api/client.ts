@@ -438,3 +438,53 @@ export interface ToolchainRadarDashboard {
     friction_by_task: TCFrictionByTask[]
     tool_usage: TCToolUsage[]
 }
+
+// ══════════════════════════════════════════════
+// Org Cascade (Problem 3 — AI Productivity Paradox)
+// ══════════════════════════════════════════════
+
+export const orgCascadeApi = {
+    dashboard: () => fetchApi<OrgCascadeDashboard>('/org-cascade/dashboard'),
+    summary: () => fetchApi<OrgGapSummary>('/org-cascade/summary'),
+    doraMetrics: () => fetchApi<OCDoraMetric[]>('/org-cascade/dora-metrics'),
+    bottlenecks: () => fetchApi<OCBottleneck[]>('/org-cascade/bottlenecks'),
+    amplifiers: () => fetchApi<OCAmplifier[]>('/org-cascade/amplifiers'),
+    cascadeFlow: () => fetchApi<OCCascadeStage[]>('/org-cascade/cascade-flow'),
+    roiReport: () => fetchApi<OCRoiReportEntry[]>('/org-cascade/roi-report'),
+    doraCorrelations: () => fetchApi<OCDoraCorrelation[]>('/org-cascade/dora-correlations'),
+}
+
+// ── Org Cascade types ──
+
+export interface OrgGapSummary {
+    org_gap: number; individual_gain: number; team_impact: number
+}
+export interface OCDoraMetric {
+    metric: string; value: number; target: number; unit: string
+}
+export interface OCBottleneck {
+    label: string; loss: number; color: string
+}
+export interface OCAmplifier {
+    practice: string; impact: string; color: string
+}
+export interface OCCascadeStage {
+    stage: string; pct: number; color: string
+}
+export interface OCRoiReportEntry {
+    week: string; ai_investment: number; measured_gain: number
+    org_throughput_delta: number; effective_roi: number
+}
+export interface OCDoraCorrelation {
+    metric: string; ai_usage_pct: number; metric_change_pct: number
+    correlation: number; trend: string
+}
+export interface OrgCascadeDashboard {
+    summary: OrgGapSummary
+    dora_metrics: OCDoraMetric[]
+    bottlenecks: OCBottleneck[]
+    amplifiers: OCAmplifier[]
+    cascade_flow: OCCascadeStage[]
+    roi_report: OCRoiReportEntry[]
+    dora_correlations: OCDoraCorrelation[]
+}

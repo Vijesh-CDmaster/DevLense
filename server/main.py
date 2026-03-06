@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import truth_lens, productivity_hub, debt_radar, dev_profiles, trust_engine, leadership, knowledge_vault, toolchain_radar
+from app.routers import truth_lens, productivity_hub, debt_radar, dev_profiles, trust_engine, leadership, knowledge_vault, toolchain_radar, org_cascade
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
@@ -33,6 +33,7 @@ app.include_router(trust_engine.router)
 app.include_router(leadership.router)
 app.include_router(knowledge_vault.router)
 app.include_router(toolchain_radar.router)
+app.include_router(org_cascade.router)
 
 
 @app.get("/api/health")
