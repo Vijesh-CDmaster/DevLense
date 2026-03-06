@@ -69,6 +69,38 @@ class WeeklyReport(BaseModel):
     weekly_trend: list[WeeklyTrendPoint]
 
 
+class DevTaskTypeAccuracy(BaseModel):
+    type: str
+    accuracy: float
+    total: int
+    accepted: int
+    reverted: int
+
+
+class DeveloperTrustProfile(BaseModel):
+    name: str
+    overall_trust_score: float
+    calibration_score: float
+    calibration_label: str  # Well-calibrated | Moderate | Poor
+    total_suggestions: int
+    accepted: int
+    reverted: int
+    overtrust_pct: float
+    undertrust_pct: float
+    best_task_type: str
+    worst_task_type: str
+    task_accuracies: list[DevTaskTypeAccuracy]
+    calibration_history: list[CalibrationPoint]
+    trend: str  # improving | stable | declining
+
+
+class TrustScoreResult(BaseModel):
+    trust: float
+    level: str
+    rec: str
+    breakdown: dict
+
+
 class TrustEngineDashboard(BaseModel):
     suggestions: list[Suggestion]
     task_types: list[TaskTypeAccuracy]
@@ -76,3 +108,4 @@ class TrustEngineDashboard(BaseModel):
     confidence_meters: list[ConfidenceMeter]
     verify_alerts: list[VerifyAlert]
     weekly_report: WeeklyReport
+    developer_profiles: list[DeveloperTrustProfile]

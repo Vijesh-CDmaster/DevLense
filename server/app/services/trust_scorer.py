@@ -1,6 +1,6 @@
 """Trust scoring engine — computes per-suggestion trust scores."""
 
-from app.data.trust_engine_data import SUGGESTIONS, TASK_TYPES
+from app.data.trust_engine_data import SUGGESTIONS, TASK_TYPES, DEVELOPER_PROFILES
 
 
 def compute_trust_score(
@@ -8,10 +8,22 @@ def compute_trust_score(
     complexity: str,
     files_affected: int,
     context_match: float,
+    developer: str | None = None,
 ) -> dict:
     """Compute a trust score for a suggestion based on task type, complexity, files, and context."""
-    # Base score = historical accuracy for the task type
-    task_accuracy = next((t.accuracy for t in TASK_TYPES if t.type.lower() == task_type.lower()), 50)
+    # Use per-developer accuracy if available
+    task_accuracy = 50
+    if developer:
+        profile = next((p for p in DEVELOPER_PROFILES if p.name.lower() == developer.lower()), None)
+        if profile:
+            task_accuracy = next(
+                (t.accuracy for t in profile.task_accuracies if t.type.lower() == task_type.lower()),
+                next((t.accuracy for t in TASK_TYPES if t.type.lower() == task_type.lower()), 50),
+            )
+        else:
+            task_accuracy = next((t.accuracy for t in TASK_TYPES if t.type.lower() == task_type.lower()), 50)
+    else:
+        task_accuracy = next((t.accuracy for t in TASK_TYPES if t.type.lower() == task_type.lower()), 50)
 
     # Complexity penalty
     complexity_penalties = {"Low": 0, "Medium": 8, "High": 18, "Very High": 30}

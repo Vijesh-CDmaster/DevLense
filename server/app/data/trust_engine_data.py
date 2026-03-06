@@ -1,6 +1,7 @@
 from app.models.trust_engine import (
     Suggestion, TaskTypeAccuracy, CalibrationPoint, ConfidenceMeter,
     VerifyAlert, WeeklyReport, WeeklyTrendPoint, TrustEngineDashboard,
+    DeveloperTrustProfile, DevTaskTypeAccuracy,
 )
 
 SUGGESTIONS = [
@@ -143,6 +144,134 @@ WEEKLY_REPORT = WeeklyReport(
 )
 
 
+DEVELOPER_PROFILES = [
+    DeveloperTrustProfile(
+        name="Sarah Chen",
+        overall_trust_score=78,
+        calibration_score=82,
+        calibration_label="Well-calibrated",
+        total_suggestions=142,
+        accepted=68,
+        reverted=6,
+        overtrust_pct=8,
+        undertrust_pct=14,
+        best_task_type="Unit test generation (94%)",
+        worst_task_type="API integration (52%)",
+        task_accuracies=[
+            DevTaskTypeAccuracy(type="Simple bug fixes", accuracy=93, total=38, accepted=35, reverted=1),
+            DevTaskTypeAccuracy(type="Unit test generation", accuracy=94, total=29, accepted=27, reverted=0),
+            DevTaskTypeAccuracy(type="Utility functions", accuracy=85, total=18, accepted=15, reverted=1),
+            DevTaskTypeAccuracy(type="Refactoring", accuracy=72, total=22, accepted=16, reverted=2),
+            DevTaskTypeAccuracy(type="New feature code", accuracy=58, total=19, accepted=11, reverted=1),
+            DevTaskTypeAccuracy(type="API integration", accuracy=52, total=10, accepted=5, reverted=1),
+            DevTaskTypeAccuracy(type="Database operations", accuracy=48, total=4, accepted=2, reverted=0),
+            DevTaskTypeAccuracy(type="Architecture decisions", accuracy=35, total=2, accepted=1, reverted=0),
+        ],
+        calibration_history=[
+            CalibrationPoint(week="Wk 1", trusted=88, correct=82, overtrust=6),
+            CalibrationPoint(week="Wk 2", trusted=84, correct=78, overtrust=6),
+            CalibrationPoint(week="Wk 3", trusted=86, correct=76, overtrust=10),
+            CalibrationPoint(week="Wk 4", trusted=80, correct=74, overtrust=6),
+            CalibrationPoint(week="Wk 5", trusted=82, correct=78, overtrust=4),
+        ],
+        trend="improving",
+    ),
+    DeveloperTrustProfile(
+        name="Marcus Rodriguez",
+        overall_trust_score=61,
+        calibration_score=54,
+        calibration_label="Moderate",
+        total_suggestions=198,
+        accepted=92,
+        reverted=18,
+        overtrust_pct=19,
+        undertrust_pct=7,
+        best_task_type="Simple bug fixes (88%)",
+        worst_task_type="Architecture decisions (22%)",
+        task_accuracies=[
+            DevTaskTypeAccuracy(type="Simple bug fixes", accuracy=88, total=52, accepted=46, reverted=2),
+            DevTaskTypeAccuracy(type="Unit test generation", accuracy=78, total=34, accepted=27, reverted=3),
+            DevTaskTypeAccuracy(type="Utility functions", accuracy=71, total=24, accepted=17, reverted=2),
+            DevTaskTypeAccuracy(type="Refactoring", accuracy=59, total=31, accepted=18, reverted=4),
+            DevTaskTypeAccuracy(type="New feature code", accuracy=47, total=28, accepted=13, reverted=4),
+            DevTaskTypeAccuracy(type="API integration", accuracy=41, total=15, accepted=6, reverted=2),
+            DevTaskTypeAccuracy(type="Database operations", accuracy=33, total=9, accepted=3, reverted=1),
+            DevTaskTypeAccuracy(type="Architecture decisions", accuracy=22, total=5, accepted=1, reverted=0),
+        ],
+        calibration_history=[
+            CalibrationPoint(week="Wk 1", trusted=92, correct=72, overtrust=20),
+            CalibrationPoint(week="Wk 2", trusted=88, correct=68, overtrust=20),
+            CalibrationPoint(week="Wk 3", trusted=90, correct=65, overtrust=25),
+            CalibrationPoint(week="Wk 4", trusted=85, correct=70, overtrust=15),
+            CalibrationPoint(week="Wk 5", trusted=82, correct=72, overtrust=10),
+        ],
+        trend="improving",
+    ),
+    DeveloperTrustProfile(
+        name="Priya Patel",
+        overall_trust_score=84,
+        calibration_score=88,
+        calibration_label="Well-calibrated",
+        total_suggestions=87,
+        accepted=31,
+        reverted=2,
+        overtrust_pct=5,
+        undertrust_pct=22,
+        best_task_type="Utility functions (92%)",
+        worst_task_type="New feature code (61%)",
+        task_accuracies=[
+            DevTaskTypeAccuracy(type="Simple bug fixes", accuracy=95, total=22, accepted=21, reverted=0),
+            DevTaskTypeAccuracy(type="Unit test generation", accuracy=90, total=18, accepted=16, reverted=1),
+            DevTaskTypeAccuracy(type="Utility functions", accuracy=92, total=15, accepted=14, reverted=0),
+            DevTaskTypeAccuracy(type="Refactoring", accuracy=78, total=12, accepted=9, reverted=1),
+            DevTaskTypeAccuracy(type="New feature code", accuracy=61, total=10, accepted=6, reverted=0),
+            DevTaskTypeAccuracy(type="API integration", accuracy=55, total=6, accepted=3, reverted=0),
+            DevTaskTypeAccuracy(type="Database operations", accuracy=50, total=3, accepted=2, reverted=0),
+            DevTaskTypeAccuracy(type="Architecture decisions", accuracy=40, total=1, accepted=0, reverted=0),
+        ],
+        calibration_history=[
+            CalibrationPoint(week="Wk 1", trusted=72, correct=70, overtrust=2),
+            CalibrationPoint(week="Wk 2", trusted=68, correct=65, overtrust=3),
+            CalibrationPoint(week="Wk 3", trusted=70, correct=64, overtrust=6),
+            CalibrationPoint(week="Wk 4", trusted=65, correct=62, overtrust=3),
+            CalibrationPoint(week="Wk 5", trusted=74, correct=72, overtrust=2),
+        ],
+        trend="stable",
+    ),
+    DeveloperTrustProfile(
+        name="Jake Morrison",
+        overall_trust_score=45,
+        calibration_score=38,
+        calibration_label="Poor",
+        total_suggestions=231,
+        accepted=142,
+        reverted=34,
+        overtrust_pct=28,
+        undertrust_pct=3,
+        best_task_type="Simple bug fixes (82%)",
+        worst_task_type="Architecture decisions (18%)",
+        task_accuracies=[
+            DevTaskTypeAccuracy(type="Simple bug fixes", accuracy=82, total=64, accepted=52, reverted=5),
+            DevTaskTypeAccuracy(type="Unit test generation", accuracy=72, total=42, accepted=30, reverted=6),
+            DevTaskTypeAccuracy(type="Utility functions", accuracy=65, total=30, accepted=20, reverted=4),
+            DevTaskTypeAccuracy(type="Refactoring", accuracy=48, total=35, accepted=17, reverted=7),
+            DevTaskTypeAccuracy(type="New feature code", accuracy=38, total=32, accepted=12, reverted=6),
+            DevTaskTypeAccuracy(type="API integration", accuracy=30, total=14, accepted=4, reverted=3),
+            DevTaskTypeAccuracy(type="Database operations", accuracy=25, total=8, accepted=2, reverted=2),
+            DevTaskTypeAccuracy(type="Architecture decisions", accuracy=18, total=6, accepted=1, reverted=1),
+        ],
+        calibration_history=[
+            CalibrationPoint(week="Wk 1", trusted=95, correct=62, overtrust=33),
+            CalibrationPoint(week="Wk 2", trusted=92, correct=58, overtrust=34),
+            CalibrationPoint(week="Wk 3", trusted=94, correct=55, overtrust=39),
+            CalibrationPoint(week="Wk 4", trusted=90, correct=60, overtrust=30),
+            CalibrationPoint(week="Wk 5", trusted=88, correct=64, overtrust=24),
+        ],
+        trend="declining",
+    ),
+]
+
+
 def get_full_dashboard() -> TrustEngineDashboard:
     return TrustEngineDashboard(
         suggestions=SUGGESTIONS,
@@ -151,4 +280,5 @@ def get_full_dashboard() -> TrustEngineDashboard:
         confidence_meters=CONFIDENCE_METERS,
         verify_alerts=VERIFY_ALERTS,
         weekly_report=WEEKLY_REPORT,
+        developer_profiles=DEVELOPER_PROFILES,
     )

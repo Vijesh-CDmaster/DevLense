@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from app.data.trust_engine_data import (
     get_full_dashboard, SUGGESTIONS, TASK_TYPES, CALIBRATION,
-    CONFIDENCE_METERS, VERIFY_ALERTS, WEEKLY_REPORT,
+    CONFIDENCE_METERS, VERIFY_ALERTS, WEEKLY_REPORT, DEVELOPER_PROFILES,
 )
 from app.services.trust_scorer import compute_trust_score, should_verify
 
@@ -49,10 +49,27 @@ def score_suggestion(
     complexity: str = "Medium",
     files_affected: int = 1,
     context_match: float = 70.0,
+    developer: str | None = None,
 ):
-    return compute_trust_score(task_type, complexity, files_affected, context_match)
+    return compute_trust_score(task_type, complexity, files_affected, context_match, developer)
 
 
 @router.get("/should-verify")
 def check_verify(trust_score: float = 50.0, task_type: str = "Refactoring"):
     return {"should_verify": should_verify(trust_score, task_type)}
+
+
+@router.get("/developer-profiles")
+def developer_profiles():
+    return DEVELOPER_PROFILES
+
+
+@router.get("/developer-profiles/{dev_name}")
+def developer_profile(dev_name: str):
+    profile = next(
+        (p for p in DEVELOPER_PROFILES if p.name.lower() == dev_name.lower()), None
+    )
+    if profile is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Developer not found")
+    return profile

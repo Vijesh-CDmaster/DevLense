@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { ShieldCheck, AlertCircle, Download, Eye, FileWarning, TrendingUp, TrendingDown } from 'lucide-react'
+import { ShieldCheck, AlertCircle, Download, Eye, FileWarning, TrendingUp, TrendingDown, Users, Calculator, BarChart3 } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, LineChart, Line,
+    AreaChart, Area, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from 'recharts'
 import { trustEngineApi } from '../api/client'
+import type { TEDeveloperProfile } from '../api/client'
 
 export default function TrustEngine() {
     const [activeIdx, setActiveIdx] = useState(1)
@@ -31,6 +32,17 @@ export default function TrustEngine() {
         calibrationScore: number; calibrationLabel: string; trend: string
         weeklyTrend: { week: string; accuracy: number; acceptance: number }[]
     } | null>(null)
+    const [devProfiles, setDevProfiles] = useState<TEDeveloperProfile[]>([])
+    const [selectedDev, setSelectedDev] = useState<string>('')
+    const [calcTaskType, setCalcTaskType] = useState('Refactoring')
+    const [calcComplexity, setCalcComplexity] = useState('Medium')
+    const [calcFiles, setCalcFiles] = useState(1)
+    const [calcContext, setCalcContext] = useState(70)
+    const [calcResult, setCalcResult] = useState<{
+        trust: number; level: string; rec: string
+        breakdown: { base_accuracy: number; complexity_penalty: number; file_penalty: number; context_bonus: number }
+    } | null>(null)
+    const [calcLoading, setCalcLoading] = useState(false)
 
     useEffect(() => {
         trustEngineApi.dashboard().then((d) => {
@@ -65,6 +77,8 @@ export default function TrustEngine() {
                 trend: d.weekly_report.trend,
                 weeklyTrend: d.weekly_report.weekly_trend,
             })
+            setDevProfiles(d.developer_profiles)
+            if (d.developer_profiles.length > 0) setSelectedDev(d.developer_profiles[0].name)
             setLoading(false)
         }).catch((err) => { console.error('TrustEngine fetch error:', err); setLoading(false) })
     }, [])
@@ -79,6 +93,16 @@ export default function TrustEngine() {
 
     const s = suggestions[activeIdx] || suggestions[0]
     const trustColor = s.level === 'green' ? '#10B981' : s.level === 'amber' ? '#F59E0B' : '#EF4444'
+
+    const activeDev = devProfiles.find((p) => p.name === selectedDev)
+
+    const runCalculator = () => {
+        setCalcLoading(true)
+        trustEngineApi.score(calcTaskType, calcComplexity, calcFiles, calcContext, selectedDev || undefined)
+            .then(setCalcResult)
+            .catch(console.error)
+            .finally(() => setCalcLoading(false))
+    }
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -403,6 +427,375 @@ export default function TrustEngine() {
                     </div>
                 </div>
             )}
+
+            {/* ══════ Personalised Developer Trust Profiles ══════ */}
+            <div className="glass-card p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                        <Users size={16} style={{ color: '#7C3AED' }} />
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">👤 Personalised Trust Calibration per Developer</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                Per-developer trust profiles — see each developer's AI accuracy by task type
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        {devProfiles.map((dp) => {
+                            const isActive = dp.name === selectedDev
+                            const dpColor = dp.calibration_score >= 75 ? '#10B981' : dp.calibration_score >= 50 ? '#F59E0B' : '#EF4444'
+                            return (
+                                <button
+                                    key={dp.name}
+                                    onClick={() => setSelectedDev(dp.name)}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                                    style={{
+                                        background: isActive ? 'rgba(0,212,255,0.12)' : 'rgba(30,45,74,0.4)',
+                                        border: `1px solid ${isActive ? 'rgba(0,212,255,0.3)' : '#1E2D4A'}`,
+                                        color: isActive ? '#00D4FF' : '#94A3B8',
+                                    }}
+                                >
+                                    {dp.name.split(' ')[0]}
+                                    <span className="ml-1.5 font-bold" style={{ color: dpColor }}>{dp.calibration_score}</span>
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {activeDev && (
+                    <div className="grid grid-cols-3 gap-6">
+                        {/* Left: Profile summary */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div
+                                    className="w-16 h-16 rounded-full flex flex-col items-center justify-center"
+                                    style={{
+                                        background: `conic-gradient(${activeDev.overall_trust_score >= 70 ? '#10B981' : activeDev.overall_trust_score >= 45 ? '#F59E0B' : '#EF4444'} 0% ${activeDev.overall_trust_score}%, #1E2D4A ${activeDev.overall_trust_score}% 100%)`,
+                                        padding: 3,
+                                    }}
+                                >
+                                    <div className="w-full h-full rounded-full flex flex-col items-center justify-center" style={{ background: '#0F1629' }}>
+                                        <span className="text-lg font-black" style={{ color: activeDev.overall_trust_score >= 70 ? '#10B981' : activeDev.overall_trust_score >= 45 ? '#F59E0B' : '#EF4444' }}>{activeDev.overall_trust_score}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-white">{activeDev.name}</p>
+                                    <div className="flex items-center gap-1 mt-0.5">
+                                        {activeDev.trend === 'improving' ? <TrendingUp size={11} style={{ color: '#10B981' }} /> : activeDev.trend === 'declining' ? <TrendingDown size={11} style={{ color: '#EF4444' }} /> : <span className="text-xs" style={{ color: '#94A3B8' }}>—</span>}
+                                        <span className="text-xs" style={{ color: activeDev.trend === 'improving' ? '#10B981' : activeDev.trend === 'declining' ? '#EF4444' : '#94A3B8' }}>{activeDev.trend}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                                <div className="p-2 rounded-lg text-center" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                    <p className="text-sm font-bold text-white">{activeDev.total_suggestions}</p>
+                                    <p style={{ color: '#94A3B8', fontSize: 9 }}>Total</p>
+                                </div>
+                                <div className="p-2 rounded-lg text-center" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                    <p className="text-sm font-bold" style={{ color: '#10B981' }}>{activeDev.accepted}</p>
+                                    <p style={{ color: '#94A3B8', fontSize: 9 }}>Accepted</p>
+                                </div>
+                                <div className="p-2 rounded-lg text-center" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                    <p className="text-sm font-bold" style={{ color: '#EF4444' }}>{activeDev.reverted}</p>
+                                    <p style={{ color: '#94A3B8', fontSize: 9 }}>Reverted</p>
+                                </div>
+                                <div className="p-2 rounded-lg text-center" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                    <p className="text-sm font-bold" style={{ color: activeDev.calibration_score >= 75 ? '#10B981' : '#F59E0B' }}>{activeDev.calibration_label}</p>
+                                    <p style={{ color: '#94A3B8', fontSize: 9 }}>Calibration</p>
+                                </div>
+                            </div>
+                            <div className="p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)' }}>
+                                <div className="flex items-center justify-between text-xs mb-1">
+                                    <span style={{ color: '#94A3B8' }}>Overtrust Rate</span>
+                                    <span className="font-bold" style={{ color: activeDev.overtrust_pct > 15 ? '#EF4444' : '#F59E0B' }}>{activeDev.overtrust_pct}%</span>
+                                </div>
+                                <div className="progress-bar"><div className="progress-fill" style={{ width: `${activeDev.overtrust_pct}%`, background: activeDev.overtrust_pct > 15 ? '#EF4444' : '#F59E0B' }} /></div>
+                                <div className="flex items-center justify-between text-xs mt-2 mb-1">
+                                    <span style={{ color: '#94A3B8' }}>Undertrust Rate</span>
+                                    <span className="font-bold" style={{ color: '#00D4FF' }}>{activeDev.undertrust_pct}%</span>
+                                </div>
+                                <div className="progress-bar"><div className="progress-fill" style={{ width: `${activeDev.undertrust_pct}%`, background: '#00D4FF' }} /></div>
+                            </div>
+                        </div>
+
+                        {/* Center: Per-developer task type accuracy */}
+                        <div>
+                            <p className="text-xs font-semibold mb-3" style={{ color: '#94A3B8' }}>📊 {activeDev.name.split(' ')[0]}'s Accuracy by Task Type</p>
+                            <div className="space-y-2">
+                                {activeDev.task_accuracies.map((ta) => {
+                                    const taColor = ta.accuracy >= 75 ? '#10B981' : ta.accuracy >= 50 ? '#F59E0B' : '#EF4444'
+                                    return (
+                                        <div key={ta.type}>
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span style={{ color: '#94A3B8', fontSize: 10 }}>{ta.type}</span>
+                                                <span className="font-bold" style={{ color: taColor }}>{ta.accuracy}%</span>
+                                            </div>
+                                            <div className="progress-bar"><div className="progress-fill" style={{ width: `${ta.accuracy}%`, background: `linear-gradient(90deg, ${taColor}88, ${taColor})` }} /></div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 mt-3">
+                                <div className="p-2 rounded-lg" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)' }}>
+                                    <p className="text-xs" style={{ color: '#94A3B8' }}>✅ Best: <span className="text-emerald-400 font-semibold" style={{ fontSize: 10 }}>{activeDev.best_task_type}</span></p>
+                                </div>
+                                <div className="p-2 rounded-lg" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.12)' }}>
+                                    <p className="text-xs" style={{ color: '#94A3B8' }}>🔴 Worst: <span className="text-red-400 font-semibold" style={{ fontSize: 10 }}>{activeDev.worst_task_type}</span></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right: Personal calibration chart */}
+                        <div>
+                            <p className="text-xs font-semibold mb-3" style={{ color: '#94A3B8' }}>🎯 {activeDev.name.split(' ')[0]}'s Weekly Calibration</p>
+                            <ResponsiveContainer width="100%" height={150}>
+                                <BarChart data={activeDev.calibration_history}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#1E2D4A" />
+                                    <XAxis dataKey="week" tick={{ fill: '#94A3B8', fontSize: 10 }} axisLine={false} tickLine={false} />
+                                    <YAxis tick={{ fill: '#94A3B8', fontSize: 10 }} axisLine={false} tickLine={false} />
+                                    <Tooltip contentStyle={{ background: '#0F1629', border: '1px solid #1E2D4A', borderRadius: 8, fontSize: 11 }} />
+                                    <Bar dataKey="trusted" name="Trusted %" fill="#00D4FF" opacity={0.7} radius={[3, 3, 0, 0]} />
+                                    <Bar dataKey="correct" name="Correct %" fill="#10B981" opacity={0.85} radius={[3, 3, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                            <div className="grid grid-cols-5 gap-1 mt-2 text-center">
+                                {activeDev.calibration_history.map((ch) => (
+                                    <div key={ch.week} className="p-1 rounded" style={{ background: 'rgba(30,45,74,0.4)' }}>
+                                        <p className="font-bold" style={{ color: ch.overtrust > 15 ? '#EF4444' : ch.overtrust > 8 ? '#F59E0B' : '#10B981', fontSize: 10 }}>{ch.overtrust}%</p>
+                                        <p style={{ color: '#64748B', fontSize: 8 }}>overtrust</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* ══════ Live Trust Score Calculator ══════ */}
+            <div className="grid grid-cols-2 gap-6">
+                <div className="glass-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Calculator size={16} style={{ color: '#00D4FF' }} />
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">🧮 Live Trust Score Calculator</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                Simulate trust scores for any task type, complexity, and developer
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        <div>
+                            <label className="text-xs mb-1 block" style={{ color: '#94A3B8' }}>Task Type</label>
+                            <select
+                                value={calcTaskType}
+                                onChange={(e) => setCalcTaskType(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg text-xs text-white"
+                                style={{ background: 'rgba(30,45,74,0.5)', border: '1px solid #1E2D4A', outline: 'none' }}
+                            >
+                                {taskTypes.map((t) => <option key={t.type} value={t.type}>{t.type}</option>)}
+                            </select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs mb-1 block" style={{ color: '#94A3B8' }}>Complexity</label>
+                                <select
+                                    value={calcComplexity}
+                                    onChange={(e) => setCalcComplexity(e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg text-xs text-white"
+                                    style={{ background: 'rgba(30,45,74,0.5)', border: '1px solid #1E2D4A', outline: 'none' }}
+                                >
+                                    {['Low', 'Medium', 'High', 'Very High'].map((c) => <option key={c} value={c}>{c}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="text-xs mb-1 block" style={{ color: '#94A3B8' }}>Files Affected</label>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={20}
+                                    value={calcFiles}
+                                    onChange={(e) => setCalcFiles(Math.max(1, parseInt(e.target.value) || 1))}
+                                    className="w-full px-3 py-2 rounded-lg text-xs text-white"
+                                    style={{ background: 'rgba(30,45,74,0.5)', border: '1px solid #1E2D4A', outline: 'none' }}
+                                />
+                            </div>
+                        </div>
+                        <div>
+                            <div className="flex justify-between text-xs mb-1">
+                                <label style={{ color: '#94A3B8' }}>Context Match</label>
+                                <span className="font-bold" style={{ color: '#00D4FF' }}>{calcContext}%</span>
+                            </div>
+                            <input
+                                type="range"
+                                min={0}
+                                max={100}
+                                value={calcContext}
+                                onChange={(e) => setCalcContext(parseInt(e.target.value))}
+                                className="w-full"
+                                style={{ accentColor: '#00D4FF' }}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs mb-1 block" style={{ color: '#94A3B8' }}>Developer (optional — for personalized score)</label>
+                            <select
+                                value={selectedDev}
+                                onChange={(e) => setSelectedDev(e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg text-xs text-white"
+                                style={{ background: 'rgba(30,45,74,0.5)', border: '1px solid #1E2D4A', outline: 'none' }}
+                            >
+                                <option value="">Team average</option>
+                                {devProfiles.map((dp) => <option key={dp.name} value={dp.name}>{dp.name}</option>)}
+                            </select>
+                        </div>
+                        <button
+                            onClick={runCalculator}
+                            disabled={calcLoading}
+                            className="w-full py-2 rounded-lg text-xs font-semibold transition-all"
+                            style={{ background: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}
+                        >
+                            {calcLoading ? 'Computing…' : '⚡ Calculate Trust Score'}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Calculator Result */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-4">📊 Score Result</h3>
+                    {calcResult ? (
+                        <div className="flex flex-col items-center gap-4">
+                            <div
+                                className="w-28 h-28 rounded-full flex flex-col items-center justify-center"
+                                style={{
+                                    background: `conic-gradient(${calcResult.level === 'green' ? '#10B981' : calcResult.level === 'amber' ? '#F59E0B' : '#EF4444'} 0% ${calcResult.trust}%, #1E2D4A ${calcResult.trust}% 100%)`,
+                                    padding: 4,
+                                    boxShadow: `0 0 25px ${calcResult.level === 'green' ? '#10B98133' : calcResult.level === 'amber' ? '#F59E0B33' : '#EF444433'}`,
+                                }}
+                            >
+                                <div className="w-full h-full rounded-full flex flex-col items-center justify-center" style={{ background: '#0F1629' }}>
+                                    <span className="text-2xl font-black" style={{ color: calcResult.level === 'green' ? '#10B981' : calcResult.level === 'amber' ? '#F59E0B' : '#EF4444' }}>
+                                        {calcResult.trust}%
+                                    </span>
+                                    <span className="text-xs" style={{ color: '#94A3B8' }}>trust</span>
+                                </div>
+                            </div>
+                            <span className={`badge-${calcResult.level} text-sm`}>
+                                {calcResult.level === 'green' ? '✅' : calcResult.level === 'amber' ? '⚠️' : '🔴'} {calcResult.rec}
+                            </span>
+                            <div className="w-full space-y-2">
+                                <div className="flex justify-between text-xs">
+                                    <span style={{ color: '#94A3B8' }}>Base Accuracy (task type)</span>
+                                    <span className="font-bold" style={{ color: '#00D4FF' }}>{calcResult.breakdown.base_accuracy}%</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                    <span style={{ color: '#94A3B8' }}>Complexity Penalty</span>
+                                    <span className="font-bold" style={{ color: '#EF4444' }}>-{calcResult.breakdown.complexity_penalty}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                    <span style={{ color: '#94A3B8' }}>Multi-file Penalty</span>
+                                    <span className="font-bold" style={{ color: '#EF4444' }}>-{calcResult.breakdown.file_penalty}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                    <span style={{ color: '#94A3B8' }}>Context Bonus</span>
+                                    <span className="font-bold" style={{ color: '#10B981' }}>+{calcResult.breakdown.context_bonus}</span>
+                                </div>
+                            </div>
+                            {selectedDev && (
+                                <div className="w-full p-2 rounded-lg text-center" style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                                    <p className="text-xs" style={{ color: '#A78BFA' }}>
+                                        Personalized for <span className="font-semibold text-white">{selectedDev}</span>'s historical accuracy
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-48 text-center">
+                            <Calculator size={32} style={{ color: '#1E2D4A' }} />
+                            <p className="text-xs mt-3" style={{ color: '#64748B' }}>
+                                Configure parameters and click "Calculate Trust Score" to see a personalized result
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* ══════ Developer Trust Comparison ══════ */}
+            <div className="glass-card p-5">
+                <div className="flex items-center gap-2 mb-4">
+                    <BarChart3 size={16} style={{ color: '#F59E0B' }} />
+                    <div>
+                        <h3 className="text-sm font-semibold text-white">📈 Developer Trust Comparison</h3>
+                        <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                            Compare calibration quality across developers — who trusts AI the right amount?
+                        </p>
+                    </div>
+                </div>
+                <div className="grid grid-cols-4 gap-4">
+                    {devProfiles.map((dp) => {
+                        const scoreColor = dp.calibration_score >= 75 ? '#10B981' : dp.calibration_score >= 50 ? '#F59E0B' : '#EF4444'
+                        const trendIcon = dp.trend === 'improving' ? '📈' : dp.trend === 'declining' ? '📉' : '➡️'
+                        return (
+                            <div
+                                key={dp.name}
+                                className="p-4 rounded-xl transition-all cursor-pointer"
+                                onClick={() => setSelectedDev(dp.name)}
+                                style={{
+                                    background: dp.name === selectedDev ? 'rgba(0,212,255,0.06)' : 'rgba(30,45,74,0.3)',
+                                    border: `1px solid ${dp.name === selectedDev ? 'rgba(0,212,255,0.2)' : '#1E2D4A'}`,
+                                }}
+                            >
+                                <div className="flex items-center justify-between mb-3">
+                                    <p className="text-xs font-semibold text-white">{dp.name}</p>
+                                    <span style={{ fontSize: 12 }}>{trendIcon}</span>
+                                </div>
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div
+                                        className="w-12 h-12 rounded-full flex items-center justify-center"
+                                        style={{
+                                            background: `conic-gradient(${scoreColor} 0% ${dp.calibration_score}%, #1E2D4A ${dp.calibration_score}% 100%)`,
+                                            padding: 2,
+                                        }}
+                                    >
+                                        <div className="w-full h-full rounded-full flex items-center justify-center" style={{ background: '#0F1629' }}>
+                                            <span className="text-xs font-black" style={{ color: scoreColor }}>{dp.calibration_score}</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold" style={{ color: scoreColor }}>{dp.calibration_label}</p>
+                                        <p style={{ color: '#64748B', fontSize: 9 }}>calibration</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <div className="flex justify-between text-xs">
+                                        <span style={{ color: '#94A3B8' }}>Overtrust</span>
+                                        <span className="font-bold" style={{ color: dp.overtrust_pct > 15 ? '#EF4444' : '#F59E0B' }}>{dp.overtrust_pct}%</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span style={{ color: '#94A3B8' }}>Undertrust</span>
+                                        <span className="font-bold" style={{ color: '#00D4FF' }}>{dp.undertrust_pct}%</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs">
+                                        <span style={{ color: '#94A3B8' }}>Reverted</span>
+                                        <span className="font-bold" style={{ color: '#EF4444' }}>{dp.reverted}/{dp.accepted}</span>
+                                    </div>
+                                </div>
+                                <div className="mt-3 pt-2" style={{ borderTop: '1px solid #1E2D4A' }}>
+                                    <p style={{ color: '#64748B', fontSize: 9 }}>
+                                        ✅ {dp.best_task_type}
+                                    </p>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+                <div className="mt-4 p-3 rounded-lg" style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)' }}>
+                    <p className="text-xs" style={{ color: '#94A3B8' }}>
+                        💡 <span className="text-purple-400 font-semibold">Priya</span> has the best calibration (88) — she rejects most AI suggestions and only accepts what she verifies.
+                        <span className="text-red-400 font-semibold"> Jake</span> overtrusts AI by 28% — 34 of his accepted suggestions were reverted.
+                        Personalised trust thresholds help each developer make better accept/reject decisions.
+                    </p>
+                </div>
+            </div>
 
             {/* Bottom Insight */}
             <div

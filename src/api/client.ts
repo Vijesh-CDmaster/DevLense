@@ -290,6 +290,11 @@ export const trustEngineApi = {
     confidenceMeters: () => fetchApi<TEConfidenceMeter[]>('/trust-engine/confidence-meters'),
     verifyAlerts: () => fetchApi<TEVerifyAlert[]>('/trust-engine/verify-alerts'),
     weeklyReport: () => fetchApi<TEWeeklyReport>('/trust-engine/weekly-report'),
+    developerProfiles: () => fetchApi<TEDeveloperProfile[]>('/trust-engine/developer-profiles'),
+    score: (taskType: string, complexity: string, filesAffected: number, contextMatch: number, developer?: string) =>
+        fetchApi<TETrustScoreResult>(`/trust-engine/score?task_type=${encodeURIComponent(taskType)}&complexity=${encodeURIComponent(complexity)}&files_affected=${filesAffected}&context_match=${contextMatch}${developer ? `&developer=${encodeURIComponent(developer)}` : ''}`),
+    shouldVerify: (trustScore: number, taskType: string) =>
+        fetchApi<{ should_verify: boolean }>(`/trust-engine/should-verify?trust_score=${trustScore}&task_type=${encodeURIComponent(taskType)}`),
 }
 
 // ── Trust Engine types ──
@@ -316,6 +321,22 @@ export interface TEWeeklyReport {
     calibration_score: number; calibration_label: string; trend: string
     weekly_trend: TEWeeklyTrendPoint[]
 }
+export interface TEDevTaskTypeAccuracy {
+    type: string; accuracy: number; total: number; accepted: number; reverted: number
+}
+export interface TEDeveloperProfile {
+    name: string; overall_trust_score: number; calibration_score: number
+    calibration_label: string; total_suggestions: number; accepted: number
+    reverted: number; overtrust_pct: number; undertrust_pct: number
+    best_task_type: string; worst_task_type: string
+    task_accuracies: TEDevTaskTypeAccuracy[]
+    calibration_history: TECalibrationPoint[]
+    trend: string
+}
+export interface TETrustScoreResult {
+    trust: number; level: string; rec: string
+    breakdown: { base_accuracy: number; complexity_penalty: number; file_penalty: number; context_bonus: number }
+}
 export interface TrustEngineDashboard {
     suggestions: TESuggestion[]
     task_types: TETaskType[]
@@ -323,6 +344,7 @@ export interface TrustEngineDashboard {
     confidence_meters: TEConfidenceMeter[]
     verify_alerts: TEVerifyAlert[]
     weekly_report: TEWeeklyReport
+    developer_profiles: TEDeveloperProfile[]
 }
 
 // ══════════════════════════════════════════════
