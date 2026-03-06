@@ -3,7 +3,7 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, AreaChart, Area,
 } from 'recharts'
-import { Send, Bell, ArrowRight, TrendingUp, TrendingDown, Clock, MessageSquare } from 'lucide-react'
+import { Send, Bell, ArrowRight, TrendingUp, TrendingDown, Clock, MessageSquare, CheckCircle } from 'lucide-react'
 import { truthLensApi, type TruthLensDashboard } from '../api/client'
 
 /* ─────── Local types for UI (camelCase mapping) ─────── */
@@ -45,6 +45,7 @@ export default function TruthLens() {
     const [alertThreshold, setAlertThreshold] = useState(20)
     const [surveyOpen, setSurveyOpen] = useState(false)
     const [surveyAnswer, setSurveyAnswer] = useState('')
+    const [submittingSurvey, setSubmittingSurvey] = useState(false)
     const [loading, setLoading] = useState(true)
 
     // API-driven state
@@ -98,7 +99,13 @@ export default function TruthLens() {
                     <button className="btn-primary" onClick={() => setSurveyOpen(!surveyOpen)}>
                         <MessageSquare size={13} /> Micro-Survey
                     </button>
-                    <button className="btn-primary">
+                    <button className="btn-primary" onClick={() => {
+                        truthLensApi.evaluateAlerts().then(() => {
+                            truthLensApi.dashboard(alertThreshold).then((data) => {
+                                setAlertHistory(data.alerts)
+                            })
+                        })
+                    }}>
                         <Send size={13} /> Send Reality Report
                     </button>
                 </div>
@@ -156,6 +163,31 @@ export default function TruthLens() {
                                 </button>
                             ))}
                         </div>
+                        {surveyAnswer && (
+                            <button
+                                className="btn-primary text-xs mb-3"
+                                disabled={submittingSurvey}
+                                onClick={() => {
+                                    setSubmittingSurvey(true)
+                                    truthLensApi.submitSurvey({
+                                        dev: 'Current User',
+                                        question: 'How much faster did AI make you on this task?',
+                                        answer: surveyAnswer,
+                                        file_path: 'auth/jwt.ts',
+                                    }).then(() => {
+                                        setSurveyAnswer('')
+                                        setSubmittingSurvey(false)
+                                        truthLensApi.surveyResponses(5).then((data) => {
+                                            setRecentSurveys(data.map((s) => ({
+                                                dev: s.dev, q: s.question, a: s.answer, realDelta: s.real_delta, time: s.time,
+                                            })))
+                                        })
+                                    }).catch(() => setSubmittingSurvey(false))
+                                }}
+                            >
+                                {submittingSurvey ? 'Submitting…' : 'Submit Response'}
+                            </button>
+                        )}
                         <p className="text-xs" style={{ color: '#94A3B8' }}>
                             ⏱️ Your answer will be compared to commit timestamps & code churn automatically
                         </p>
@@ -293,15 +325,15 @@ export default function TruthLens() {
 
                 <div className="grid grid-cols-3 gap-4 my-4">
                     <div className="p-3 rounded-xl text-center" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)' }}>
-                        <p className="text-2xl font-black" style={{ color: '#EF4444' }}>39%</p>
+                        <p className="text-2xl font-black" style={{ color: '#EF4444' }}>{weeklyDrift.length > 0 ? weeklyDrift[weeklyDrift.length - 1].gap : 0}%</p>
                         <p className="text-xs" style={{ color: '#94A3B8' }}>Current Gap</p>
                     </div>
                     <div className="p-3 rounded-xl text-center" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.18)' }}>
-                        <p className="text-2xl font-black" style={{ color: '#F59E0B' }}>+4pts</p>
+                        <p className="text-2xl font-black" style={{ color: '#F59E0B' }}>+{weeklyDrift.length >= 2 ? weeklyDrift[weeklyDrift.length - 1].gap - weeklyDrift[weeklyDrift.length - 2].gap : 0}pts</p>
                         <p className="text-xs" style={{ color: '#94A3B8' }}>Weekly Growth</p>
                     </div>
                     <div className="p-3 rounded-xl text-center" style={{ background: 'rgba(124,58,237,0.08)', border: '1px solid rgba(124,58,237,0.18)' }}>
-                        <p className="text-2xl font-black" style={{ color: '#7C3AED' }}>~6 wks</p>
+                        <p className="text-2xl font-black" style={{ color: '#7C3AED' }}>~{weeklyDrift.length >= 2 ? Math.max(1, Math.ceil((50 - weeklyDrift[weeklyDrift.length - 1].gap) / Math.max(1, weeklyDrift[weeklyDrift.length - 1].gap - weeklyDrift[weeklyDrift.length - 2].gap))) : '?'} wks</p>
                         <p className="text-xs" style={{ color: '#94A3B8' }}>Time to 50% if unchecked</p>
                     </div>
                 </div>
@@ -351,7 +383,11 @@ export default function TruthLens() {
                             <span className="text-xs" style={{ color: '#94A3B8' }}>Threshold:</span>
                             <div className="flex items-center gap-1">
                                 <button
-                                    onClick={() => setAlertThreshold(Math.max(5, alertThreshold - 5))}
+                                    onClick={() => {
+                                        const next = Math.max(5, alertThreshold - 5)
+                                        setAlertThreshold(next)
+                                        truthLensApi.setThreshold(next)
+                                    }}
                                     className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
                                     style={{ background: 'rgba(30,45,74,0.8)', border: '1px solid #1E2D4A', color: '#94A3B8' }}
                                 >
@@ -359,7 +395,11 @@ export default function TruthLens() {
                                 </button>
                                 <span className="text-sm font-bold px-1.5" style={{ color: '#F59E0B' }}>{alertThreshold}%</span>
                                 <button
-                                    onClick={() => setAlertThreshold(Math.min(80, alertThreshold + 5))}
+                                    onClick={() => {
+                                        const next = Math.min(80, alertThreshold + 5)
+                                        setAlertThreshold(next)
+                                        truthLensApi.setThreshold(next)
+                                    }}
                                     className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold"
                                     style={{ background: 'rgba(30,45,74,0.8)', border: '1px solid #1E2D4A', color: '#94A3B8' }}
                                 >
@@ -403,7 +443,24 @@ export default function TruthLens() {
                                                 → {alert.action}
                                             </p>
                                         </div>
-                                        <span className="text-xs shrink-0" style={{ color: '#94A3B8' }}>{alert.time}</span>
+                                        <div className="flex flex-col items-end gap-1 shrink-0">
+                                            <span className="text-xs" style={{ color: '#94A3B8' }}>{alert.time}</span>
+                                            {!alert.resolved && (
+                                                <button
+                                                    onClick={() => {
+                                                        truthLensApi.resolveAlert(alert.id).then(() => {
+                                                            setAlertHistory((prev) =>
+                                                                prev.map((a) => a.id === alert.id ? { ...a, resolved: true } : a)
+                                                            )
+                                                        })
+                                                    }}
+                                                    className="flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium transition-all"
+                                                    style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', color: '#10B981' }}
+                                                >
+                                                    <CheckCircle size={10} /> Resolve
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             )
@@ -450,7 +507,19 @@ export default function TruthLens() {
                     })}
                     <div className="p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
                         <p className="text-xs" style={{ color: '#94A3B8' }}>
-                            🔴 Largest illusion: <span className="text-red-400 font-semibold">Code Speed</span> — team believes +78% AI gain, reality is only +42%.
+                            🔴 Largest illusion: <span className="text-red-400 font-semibold">
+                                {(() => {
+                                    const sorted = [...illusionScore.dimensions].sort((a, b) => (b.belief - b.reality) - (a.belief - a.reality))
+                                    const worst = sorted[0]
+                                    return worst ? `${worst.dimension}` : 'N/A'
+                                })()}
+                            </span> — team believes +{(() => {
+                                const sorted = [...illusionScore.dimensions].sort((a, b) => (b.belief - b.reality) - (a.belief - a.reality))
+                                return sorted[0]?.belief ?? 0
+                            })()}% AI gain, reality is only +{(() => {
+                                const sorted = [...illusionScore.dimensions].sort((a, b) => (b.belief - b.reality) - (a.belief - a.reality))
+                                return sorted[0]?.reality ?? 0
+                            })()}%.
                         </p>
                     </div>
                 </div>

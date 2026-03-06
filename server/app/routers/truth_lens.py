@@ -35,11 +35,12 @@ from app.services.alert_engine import (
     resolve_alert,
     update_threshold,
 )
-from app.services.github_service import get_recent_commits
+from app.services.github_service import get_recent_commits, get_commit_detail, compute_telemetry_gain
 from app.services.slack_service import (
     get_survey_questions,
     get_survey_responses,
     send_survey,
+    send_alert_to_manager,
     store_survey_response,
 )
 
@@ -130,6 +131,18 @@ async def evaluate_alerts():
     return {"alerts_fired": len(fired), "alerts": fired}
 
 
+@router.post("/alerts/notify-manager")
+async def notify_manager(
+    manager_slack_id: str = Query(...),
+    dev_name: str = Query(...),
+    gap_pct: float = Query(...),
+    threshold: int = Query(20),
+):
+    """Send a Slack alert to a manager about a perception gap breach."""
+    ok = await send_alert_to_manager(manager_slack_id, dev_name, gap_pct, threshold)
+    return {"sent": ok}
+
+
 # ══════ Micro-Surveys ══════
 
 @router.get("/surveys/questions")
@@ -187,3 +200,15 @@ async def recent_commits(since_hours: int = Query(24, ge=1, le=168)):
             for c in commits[:50]
         ],
     }
+
+
+@router.get("/github/telemetry")
+async def commit_telemetry(
+    sha: str = Query(..., min_length=4, max_length=40),
+    avg_minutes: float = Query(30, ge=1, le=480),
+):
+    """Compute telemetry gain for a specific commit vs baseline avg."""
+    detail = await get_commit_detail(sha)
+    if not detail:
+        return {"error": "Commit not found or GitHub not configured"}
+    return compute_telemetry_gain(detail, avg_minutes)
