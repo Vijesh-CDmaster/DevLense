@@ -1,138 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, AreaChart, Area,
 } from 'recharts'
 import { Send, Bell, ArrowRight, TrendingUp, TrendingDown, Clock, MessageSquare } from 'lucide-react'
+import { truthLensApi, type TruthLensDashboard } from '../api/client'
 
-/* ─────── Data ─────── */
+/* ─────── Local types for UI (camelCase mapping) ─────── */
 
-const divergenceData = [
-    { month: 'Jan', belief: 15, reality: 12, gap: 3 },
-    { month: 'Feb', belief: 18, reality: 10, gap: 8 },
-    { month: 'Mar', belief: 22, reality: 5, gap: 17 },
-    { month: 'Apr', belief: 25, reality: -8, gap: 33 },
-    { month: 'May', belief: 20, reality: -12, gap: 32 },
-    { month: 'Jun', belief: 20, reality: -19, gap: 39 },
-]
-
-const devBreakdown = [
-    { name: 'Raj Kumar', belief: '+25%', reality: '-12%', gap: 37, level: 'red' },
-    { name: 'Priya S.', belief: '+18%', reality: '+5%', gap: 13, level: 'amber' },
-    { name: 'Arjun M.', belief: '+30%', reality: '+28%', gap: 2, level: 'green' },
-    { name: 'Meena R.', belief: '+22%', reality: '+19%', gap: 3, level: 'green' },
-    { name: 'Dev K.', belief: '+35%', reality: '-22%', gap: 57, level: 'red' },
-]
-
-/* ── Real-time Self-Report vs Telemetry data ── */
-const selfReportComparator = [
-    {
-        dev: 'Raj Kumar',
-        task: 'Auth token refresh refactor',
-        selfReport: 'Saved ~2 hrs with AI',
-        actualTime: '4.3h (3.1h avg for this task type)',
-        selfGain: '+35%',
-        telemetryGain: '-38%',
-        timestamp: '2:14 PM today',
-    },
-    {
-        dev: 'Priya S.',
-        task: 'Unit tests for payment service',
-        selfReport: 'AI generated 12 tests in 20min',
-        actualTime: '48min (32min avg)',
-        selfGain: '+60%',
-        telemetryGain: '-50%',
-        timestamp: '11:42 AM today',
-    },
-    {
-        dev: 'Arjun M.',
-        task: 'REST endpoint for user profile',
-        selfReport: 'Copilot got it mostly right',
-        actualTime: '22min (25min avg)',
-        selfGain: '+12%',
-        telemetryGain: '+12%',
-        timestamp: '10:08 AM today',
-    },
-    {
-        dev: 'Dev K.',
-        task: 'Database migration script',
-        selfReport: 'AI wrote the migration perfectly',
-        actualTime: '1.8h (0.9h avg) + 2 reverts',
-        selfGain: '+50%',
-        telemetryGain: '-100%',
-        timestamp: '9:31 AM today',
-    },
-]
-
-/* ── Weekly Perception Drift ── */
-const weeklyDrift = [
-    { week: 'W1', belief: 22, reality: 18, gap: 4, momentum: 'stable' },
-    { week: 'W2', belief: 24, reality: 14, gap: 10, momentum: 'widening' },
-    { week: 'W3', belief: 23, reality: 8, gap: 15, momentum: 'widening' },
-    { week: 'W4', belief: 26, reality: 2, gap: 24, momentum: 'widening' },
-    { week: 'W5', belief: 25, reality: -4, gap: 29, momentum: 'widening' },
-    { week: 'W6', belief: 22, reality: -9, gap: 31, momentum: 'widening' },
-    { week: 'W7', belief: 21, reality: -14, gap: 35, momentum: 'accelerating' },
-    { week: 'W8', belief: 20, reality: -19, gap: 39, momentum: 'accelerating' },
-]
-
-/* ── Manager Alert System ── */
-const alertHistory = [
-    {
-        id: 1,
-        type: 'threshold',
-        severity: 'red',
-        msg: 'Dev K. perception gap hit 57% — exceeds 20% threshold by 37pts',
-        action: 'Auto-notified manager + scheduled 1:1',
-        time: '35 min ago',
-        resolved: false,
-    },
-    {
-        id: 2,
-        type: 'threshold',
-        severity: 'red',
-        msg: 'Raj Kumar gap reached 37% — 3rd consecutive week above threshold',
-        action: 'Escalated to engineering lead',
-        time: '2 hrs ago',
-        resolved: false,
-    },
-    {
-        id: 3,
-        type: 'drift',
-        severity: 'amber',
-        msg: 'Team-wide perception drift rate accelerating — gap grew 4pts this week',
-        action: 'Weekly reality report sent to team',
-        time: '1 day ago',
-        resolved: true,
-    },
-    {
-        id: 4,
-        type: 'threshold',
-        severity: 'amber',
-        msg: 'Priya S. gap crossed 13% — approaching 20% alert threshold',
-        action: 'Added to monitoring watchlist',
-        time: '2 days ago',
-        resolved: true,
-    },
-    {
-        id: 5,
-        type: 'drift',
-        severity: 'green',
-        msg: 'Arjun M. perception gap stable at 2% for 4 consecutive weeks',
-        action: 'Marked as well-calibrated developer',
-        time: '3 days ago',
-        resolved: true,
-    },
-]
-
-/* ── Micro-survey responses ── */
-const recentSurveys = [
-    { dev: 'Raj K.', q: 'How much did AI speed up this task?', a: '~35% faster', realDelta: '-38%', time: '2:14 PM' },
-    { dev: 'Priya S.', q: 'Rate AI helpfulness (1-10)', a: '8/10', realDelta: '-50%', time: '11:42 AM' },
-    { dev: 'Arjun M.', q: 'Would you have been faster without AI?', a: 'No', realDelta: '+12%', time: '10:08 AM' },
-    { dev: 'Dev K.', q: 'How much did AI speed up this task?', a: '~50% faster', realDelta: '-100%', time: '9:31 AM' },
-    { dev: 'Meena R.', q: 'Rate AI helpfulness (1-10)', a: '7/10', realDelta: '+19%', time: 'Yesterday' },
-]
+interface SelfReportItem {
+    dev: string; task: string; selfReport: string; actualTime: string
+    selfGain: string; telemetryGain: string; timestamp: string
+}
+interface SurveyItem {
+    dev: string; q: string; a: string; realDelta: string; time: string
+}
 
 function GaugeMeter({ value, label, color, sub }: { value: string; label: string; color: string; sub: string }) {
     return (
@@ -163,6 +45,45 @@ export default function TruthLens() {
     const [alertThreshold, setAlertThreshold] = useState(20)
     const [surveyOpen, setSurveyOpen] = useState(false)
     const [surveyAnswer, setSurveyAnswer] = useState('')
+    const [loading, setLoading] = useState(true)
+
+    // API-driven state
+    const [divergenceData, setDivergenceData] = useState<{ month: string; belief: number; reality: number; gap: number }[]>([])
+    const [devBreakdown, setDevBreakdown] = useState<{ name: string; belief: string; reality: string; gap: number; level: string }[]>([])
+    const [selfReportComparator, setSelfReportComparator] = useState<SelfReportItem[]>([])
+    const [weeklyDrift, setWeeklyDrift] = useState<{ week: string; belief: number; reality: number; gap: number; momentum: string }[]>([])
+    const [alertHistory, setAlertHistory] = useState<{ id: number; type: string; severity: string; msg: string; action: string; time: string; resolved: boolean }[]>([])
+    const [recentSurveys, setRecentSurveys] = useState<SurveyItem[]>([])
+    const [illusionScore, setIllusionScore] = useState({ score: 0, drift_rate: '', threshold: 20, dimensions: [] as { dimension: string; belief: number; reality: number; icon: string }[] })
+    const [gauges, setGauges] = useState({ team_belief: '', telemetry_reality: '', belief_sub: '', reality_sub: '' })
+
+    useEffect(() => {
+        truthLensApi.dashboard(alertThreshold).then((data) => {
+            setDivergenceData(data.divergence_timeline)
+            setDevBreakdown(data.dev_breakdown)
+            setSelfReportComparator(data.self_report_comparator.map((s) => ({
+                dev: s.dev, task: s.task, selfReport: s.self_report, actualTime: s.actual_time,
+                selfGain: s.self_gain, telemetryGain: s.telemetry_gain, timestamp: s.timestamp,
+            })))
+            setWeeklyDrift(data.weekly_drift)
+            setAlertHistory(data.alerts)
+            setRecentSurveys(data.recent_surveys.map((s) => ({
+                dev: s.dev, q: s.question, a: s.answer, realDelta: s.real_delta, time: s.time,
+            })))
+            setIllusionScore(data.illusion_score)
+            setGauges(data.gauges)
+            setAlertThreshold(data.alert_config.threshold_pct)
+            setLoading(false)
+        }).catch(() => setLoading(false))
+    }, [])
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-sm" style={{ color: '#94A3B8' }}>Loading Truth Lens data…</div>
+            </div>
+        )
+    }
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -191,17 +112,17 @@ export default function TruthLens() {
                     border: '1px solid rgba(239,68,68,0.22)',
                 }}
             >
-                <div className="text-3xl font-black" style={{ color: '#EF4444' }}>🔴 64</div>
+                <div className="text-3xl font-black" style={{ color: '#EF4444' }}>🔴 {illusionScore.score}</div>
                 <div className="flex-1">
                     <p className="text-sm font-bold text-white">Org Illusion Score</p>
                     <p className="text-xs" style={{ color: '#94A3B8' }}>
-                        Your team overestimates AI impact by <span className="text-red-400 font-semibold">64 points</span> on average. Manager alert triggered — gap exceeds {alertThreshold}% threshold.
+                        Your team overestimates AI impact by <span className="text-red-400 font-semibold">{illusionScore.score} points</span> on average. Manager alert triggered — gap exceeds {alertThreshold}% threshold.
                     </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xs" style={{ color: '#94A3B8' }}>Drift:</span>
                     <TrendingUp size={14} style={{ color: '#EF4444' }} />
-                    <span className="text-xs font-bold" style={{ color: '#EF4444' }}>+4pts/wk</span>
+                    <span className="text-xs font-bold" style={{ color: '#EF4444' }}>{illusionScore.drift_rate}</span>
                 </div>
             </div>
 
@@ -271,8 +192,8 @@ export default function TruthLens() {
 
             {/* Dual Gauges */}
             <div className="grid grid-cols-2 gap-6">
-                <GaugeMeter value="+20%" label="Team Belief" color="#10B981" sub="Average self-reported AI productivity gain" />
-                <GaugeMeter value="-19%" label="Telemetry Reality" color="#EF4444" sub="Actual measured impact on experienced developers" />
+                <GaugeMeter value={gauges.team_belief} label="Team Belief" color="#10B981" sub={gauges.belief_sub} />
+                <GaugeMeter value={gauges.telemetry_reality} label="Telemetry Reality" color="#EF4444" sub={gauges.reality_sub} />
             </div>
 
             {/* ══════ NEW: Real-time Self-Report vs Telemetry Comparator ══════ */}
@@ -502,19 +423,14 @@ export default function TruthLens() {
                     <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
                         Aggregated self-reports vs actual delivery metrics by dimension
                     </p>
-                    {[
-                        { dim: 'Code Speed', belief: 78, reality: 42, icon: '⚡' },
-                        { dim: 'Code Quality', belief: 72, reality: 38, icon: '🎯' },
-                        { dim: 'Bug Resolution', belief: 65, reality: 55, icon: '🐛' },
-                        { dim: 'Test Coverage', belief: 80, reality: 61, icon: '🧪' },
-                        { dim: 'Review Throughput', belief: 60, reality: 58, icon: '👀' },
-                    ].map((d) => {
+                    {illusionScore.dimensions.map((d) => {
+                        const dim = d.dimension
                         const gap = d.belief - d.reality
                         const gapColor = gap > 25 ? '#EF4444' : gap > 10 ? '#F59E0B' : '#10B981'
                         return (
-                            <div key={d.dim} className="mb-4">
+                            <div key={dim} className="mb-4">
                                 <div className="flex items-center justify-between text-xs mb-1.5">
-                                    <span style={{ color: '#94A3B8' }}>{d.icon} {d.dim}</span>
+                                    <span style={{ color: '#94A3B8' }}>{d.icon} {dim}</span>
                                     <span className="font-bold" style={{ color: gapColor }}>gap: {gap}pts</span>
                                 </div>
                                 <div className="flex gap-1" style={{ height: 8 }}>

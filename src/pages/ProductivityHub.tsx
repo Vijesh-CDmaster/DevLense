@@ -1,167 +1,62 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     RadarChart, Radar, PolarGrid, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
     LineChart, Line, AreaChart, Area, Legend,
 } from 'recharts'
 import { TrendingDown, TrendingUp, Clock, Download } from 'lucide-react'
-
-/* ─────── HPS ─────── */
-
-const hpsData = [
-    { dimension: 'Speed', value: 80 },
-    { dimension: 'Quality', value: 60 },
-    { dimension: 'Wellbeing', value: 55 },
-    { dimension: 'Collab', value: 70 },
-    { dimension: 'AI Ratio', value: 62 },
-]
-
-const dimensions = [
-    { label: 'Speed', value: 80, color: '#00D4FF', weight: 25 },
-    { label: 'Quality', value: 60, color: '#7C3AED', weight: 30 },
-    { label: 'Wellbeing', value: 55, color: '#10B981', weight: 20 },
-    { label: 'Collaboration', value: 70, color: '#F59E0B', weight: 15 },
-    { label: 'AI Quality Ratio', value: 62, color: '#EF4444', weight: 10 },
-]
-
-const hpsWeekly = [
-    { week: 'W1', hps: 78, speed: 82, quality: 72, wellbeing: 68, collab: 74, aiRatio: 75 },
-    { week: 'W2', hps: 77, speed: 83, quality: 70, wellbeing: 65, collab: 73, aiRatio: 72 },
-    { week: 'W3', hps: 75, speed: 81, quality: 66, wellbeing: 62, collab: 72, aiRatio: 68 },
-    { week: 'W4', hps: 74, speed: 80, quality: 64, wellbeing: 60, collab: 71, aiRatio: 65 },
-    { week: 'W5', hps: 73, speed: 82, quality: 62, wellbeing: 57, collab: 70, aiRatio: 63 },
-    { week: 'W6', hps: 72, speed: 80, quality: 60, wellbeing: 55, collab: 70, aiRatio: 62 },
-]
-
-/* ─────── FLOW Score (per developer) ─────── */
-
-const devFlowScores = [
-    { name: 'Raj Kumar', deepWork: 2.1, interrupted: 2.8, meetings: 2.3, flowScore: 38, trend: 'down', delta: -8 },
-    { name: 'Priya S.', deepWork: 3.4, interrupted: 1.6, meetings: 2.1, flowScore: 52, trend: 'down', delta: -3 },
-    { name: 'Arjun M.', deepWork: 4.8, interrupted: 0.9, meetings: 1.4, flowScore: 74, trend: 'up', delta: 5 },
-    { name: 'Meena R.', deepWork: 5.2, interrupted: 0.6, meetings: 1.3, flowScore: 81, trend: 'up', delta: 2 },
-    { name: 'Dev K.', deepWork: 1.8, interrupted: 3.1, meetings: 2.6, flowScore: 31, trend: 'down', delta: -12 },
-]
-
-const flowTimeline = [
-    { hour: '9 AM', deep: 0, interrupted: 1, meeting: 0 },
-    { hour: '10 AM', deep: 1, interrupted: 0, meeting: 0 },
-    { hour: '11 AM', deep: 1, interrupted: 0, meeting: 0 },
-    { hour: '12 PM', deep: 0, interrupted: 0, meeting: 1 },
-    { hour: '1 PM', deep: 0, interrupted: 1, meeting: 0 },
-    { hour: '2 PM', deep: 1, interrupted: 0, meeting: 0 },
-    { hour: '3 PM', deep: 0, interrupted: 0, meeting: 1 },
-    { hour: '4 PM', deep: 0, interrupted: 1, meeting: 0 },
-    { hour: '5 PM', deep: 1, interrupted: 0, meeting: 0 },
-]
-
-/* ─────── Cognitive Load ─────── */
-
-const contextSwitches = [
-    { label: 'Context Switches', value: 14, icon: '🔀', threshold: 10, unit: '/day' },
-    { label: 'Tool Switches', value: 8, icon: '⚙️', threshold: 6, unit: '/day' },
-    { label: 'Meetings Today', value: 4, icon: '📅', threshold: 3, unit: 'today' },
-    { label: 'Interruptions', value: 11, icon: '🔔', threshold: 8, unit: '/day' },
-]
-
-const cognitiveLoadHourly = [
-    { hour: '9 AM', load: 22 },
-    { hour: '10 AM', load: 35 },
-    { hour: '11 AM', load: 68 },
-    { hour: '12 PM', load: 42 },
-    { hour: '1 PM', load: 55 },
-    { hour: '2 PM', load: 78 },
-    { hour: '3 PM', load: 85 },
-    { hour: '4 PM', load: 62 },
-    { hour: '5 PM', load: 48 },
-]
-
-/* ─────── AI Quality Ratio ─────── */
-
-const aiQualityByModule = [
-    { module: 'auth/', accepted: 34, reverted: 18, modified: 12, ratio: 53, level: 'red' },
-    { module: 'payments/', accepted: 28, reverted: 8, modified: 9, ratio: 62, level: 'amber' },
-    { module: 'user/', accepted: 45, reverted: 4, modified: 6, ratio: 82, level: 'green' },
-    { module: 'api/routes', accepted: 22, reverted: 7, modified: 5, ratio: 65, level: 'amber' },
-    { module: 'notifications/', accepted: 19, reverted: 3, modified: 4, ratio: 73, level: 'green' },
-    { module: 'reporting/', accepted: 15, reverted: 11, modified: 8, ratio: 44, level: 'red' },
-]
-
-const aiQualityTrend = [
-    { sprint: 'Sprint 1', ratio: 78 },
-    { sprint: 'Sprint 2', ratio: 72 },
-    { sprint: 'Sprint 3', ratio: 65 },
-    { sprint: 'Sprint 4', ratio: 58 },
-    { sprint: 'Sprint 5', ratio: 53 },
-]
-
-/* ─────── Rework Attribution ─────── */
-
-const reworkData = [
-    { sprint: 'Sprint 1', survived: 88, reverted: 12 },
-    { sprint: 'Sprint 2', survived: 79, reverted: 21 },
-    { sprint: 'Sprint 3', survived: 72, reverted: 28 },
-    { sprint: 'Sprint 4', survived: 62, reverted: 38 },
-    { sprint: 'Sprint 5', survived: 58, reverted: 42 },
-]
-
-const reworkPRs = [
-    {
-        pr: '#487',
-        title: 'Refactor auth token refresh flow',
-        dev: 'Raj Kumar',
-        aiPct: 78,
-        reworkHrs: 6.2,
-        reason: 'AI-generated logic conflicted with existing session management — full rewrite needed',
-        file: 'auth/jwt.ts',
-        status: 'reverted',
-    },
-    {
-        pr: '#491',
-        title: 'Add payment webhook validation',
-        dev: 'Dev K.',
-        aiPct: 92,
-        reworkHrs: 4.8,
-        reason: 'AI copy-pasted error handling pattern — missed idempotency key validation',
-        file: 'payments/webhook.ts',
-        status: 'reverted',
-    },
-    {
-        pr: '#495',
-        title: 'User profile PATCH endpoint',
-        dev: 'Priya S.',
-        aiPct: 65,
-        reworkHrs: 1.4,
-        reason: 'AI suggestion lacked input sanitisation for nested objects — security review flagged',
-        file: 'api/users.ts',
-        status: 'modified',
-    },
-    {
-        pr: '#498',
-        title: 'Notification retry logic',
-        dev: 'Dev K.',
-        aiPct: 88,
-        reworkHrs: 3.1,
-        reason: 'AI-generated exponential backoff had no jitter — would cause thundering herd in production',
-        file: 'notifications/retry.ts',
-        status: 'modified',
-    },
-    {
-        pr: '#502',
-        title: 'Report export CSV generation',
-        dev: 'Raj Kumar',
-        aiPct: 95,
-        reworkHrs: 5.6,
-        reason: 'Entire function AI-generated — failed on datasets >10K rows, memory leak in stream handling',
-        file: 'reporting/export.ts',
-        status: 'reverted',
-    },
-]
+import { productivityHubApi } from '../api/client'
 
 const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
 
 export default function ProductivityHub() {
     const [selectedDev, setSelectedDev] = useState(0)
-    const dev = devFlowScores[selectedDev]
+    const [loading, setLoading] = useState(true)
+
+    // API-driven state
+    const [hpsData, setHpsData] = useState<{ dimension: string; value: number }[]>([])
+    const [dimensions, setDimensions] = useState<{ label: string; value: number; color: string; weight: number }[]>([])
+    const [hpsWeekly, setHpsWeekly] = useState<{ week: string; hps: number; speed: number; quality: number; wellbeing: number; collab: number; aiRatio: number }[]>([])
+    const [devFlowScores, setDevFlowScores] = useState<{ name: string; deepWork: number; interrupted: number; meetings: number; flowScore: number; trend: string; delta: number }[]>([])
+    const [flowTimeline, setFlowTimeline] = useState<{ hour: string; deep: number; interrupted: number; meeting: number }[]>([])
+    const [contextSwitches, setContextSwitches] = useState<{ label: string; value: number; icon: string; threshold: number; unit: string }[]>([])
+    const [cognitiveLoadHourly, setCognitiveLoadHourly] = useState<{ hour: string; load: number }[]>([])
+    const [aiQualityByModule, setAiQualityByModule] = useState<{ module: string; accepted: number; reverted: number; modified: number; ratio: number; level: string }[]>([])
+    const [aiQualityTrend, setAiQualityTrend] = useState<{ sprint: string; ratio: number }[]>([])
+    const [reworkData, setReworkData] = useState<{ sprint: string; survived: number; reverted: number }[]>([])
+    const [reworkPRs, setReworkPRs] = useState<{ pr: string; title: string; dev: string; aiPct: number; reworkHrs: number; reason: string; file: string; status: string }[]>([])
+
+    useEffect(() => {
+        productivityHubApi.dashboard().then((d) => {
+            setHpsData(d.hps_radar)
+            setDimensions(d.dimensions)
+            setHpsWeekly(d.hps_weekly.map((w) => ({ ...w, aiRatio: w.ai_ratio })))
+            setDevFlowScores(d.dev_flow_scores.map((f) => ({
+                name: f.name, deepWork: f.deep_work, interrupted: f.interrupted,
+                meetings: f.meetings, flowScore: f.flow_score, trend: f.trend, delta: f.delta,
+            })))
+            setFlowTimeline(d.flow_timeline)
+            setContextSwitches(d.context_switches)
+            setCognitiveLoadHourly(d.cognitive_load_hourly)
+            setAiQualityByModule(d.ai_quality_by_module)
+            setAiQualityTrend(d.ai_quality_trend)
+            setReworkData(d.rework_data)
+            setReworkPRs(d.rework_prs.map((p) => ({
+                pr: p.pr, title: p.title, dev: p.dev, aiPct: p.ai_pct,
+                reworkHrs: p.rework_hrs, reason: p.reason, file: p.file, status: p.status,
+            })))
+            setLoading(false)
+        }).catch((err) => { console.error('ProductivityHub fetch error:', err); setLoading(false) })
+    }, [])
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-sm" style={{ color: '#94A3B8' }}>Loading Productivity Hub…</div>
+            </div>
+        )
+    }
+
+    const dev = devFlowScores[selectedDev] || devFlowScores[0]
 
     return (
         <div className="space-y-6 animate-fade-in">
