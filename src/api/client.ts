@@ -293,3 +293,56 @@ export interface TrustEngineDashboard {
     verify_alerts: TEVerifyAlert[]
     weekly_report: TEWeeklyReport
 }
+
+// ══════════════════════════════════════════════
+// Leadership View (Problem 8 — Empathy Gap)
+// ══════════════════════════════════════════════
+
+export const leadershipApi = {
+    dashboard: () => fetchApi<LeadershipDashboard>('/leadership/dashboard'),
+    frictionHeatmap: () => fetchApi<LVFrictionPoint[]>('/leadership/friction-heatmap'),
+    empathyGaps: () => fetchApi<LVEmpathyGap[]>('/leadership/empathy-gaps'),
+    actionLoop: () => fetchApi<LVActionLoopItem[]>('/leadership/action-loop'),
+    decisionImpacts: () => fetchApi<LVDecisionImpact[]>('/leadership/decision-impacts'),
+    translations: () => fetchApi<LVTranslation[]>('/leadership/translations'),
+    pulseResults: () => fetchApi<LVPulseResult[]>('/leadership/pulse-results'),
+    empathyScore: () => fetchApi<LVEmpathyScore>('/leadership/empathy-score'),
+}
+
+// ── Leadership types ──
+
+export interface LVFrictionPoint { area: string; dev_hours: number; leader_estimate: number; severity: string }
+export interface LVEmpathyGap {
+    dev_says: string; leader_thinks: string; gap: string; cost: string
+    category: string; kpi_impact: string
+}
+export interface LVActionLoopItem {
+    issue: string; action: string; status: string; date: string
+    hours_recovered: number; dev_satisfaction: number
+}
+export interface LVDecisionImpact {
+    decision: string; made_by: string; date: string
+    dev_hours_lost: number; dollars_lost: number; affected_devs: number; category: string
+}
+export interface LVTranslation {
+    dev_pain: string; exec_translation: string; kpi: string
+    dollar_impact: string; priority: string
+}
+export interface LVPulseResult {
+    week: string; productivity: number; blocker_count: number
+    ai_sentiment: number; response_rate: number
+}
+export interface LVEmpathyScoreWeekPoint { week: string; score: number }
+export interface LVEmpathyScore {
+    score: number; label: string; trend: string; monthly_cost: string
+    gap_areas: number; total_gaps: number; weekly_trend: LVEmpathyScoreWeekPoint[]
+}
+export interface LeadershipDashboard {
+    friction_heatmap: LVFrictionPoint[]
+    empathy_gaps: LVEmpathyGap[]
+    action_loop: LVActionLoopItem[]
+    decision_impacts: LVDecisionImpact[]
+    translations: LVTranslation[]
+    pulse_results: LVPulseResult[]
+    empathy_score: LVEmpathyScore
+}
