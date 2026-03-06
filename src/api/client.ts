@@ -360,6 +360,12 @@ export const leadershipApi = {
     translations: () => fetchApi<LVTranslation[]>('/leadership/translations'),
     pulseResults: () => fetchApi<LVPulseResult[]>('/leadership/pulse-results'),
     empathyScore: () => fetchApi<LVEmpathyScore>('/leadership/empathy-score'),
+    developerFrictions: () => fetchApi<LVDeveloperFriction[]>('/leadership/developer-frictions'),
+    frictionTrends: () => fetchApi<LVFrictionTrendPoint[]>('/leadership/friction-trends'),
+    impactSimulations: () => fetchApi<LVImpactSimulation[]>('/leadership/impact-simulations'),
+    empathyDimensions: () => fetchApi<LVEmpathyDimension[]>('/leadership/empathy-dimensions'),
+    briefing: () => fetchApi<LVLeadershipBriefing>('/leadership/briefing'),
+    escalations: () => fetchApi<LVEscalationItem[]>('/leadership/escalations'),
 }
 
 // ── Leadership types ──
@@ -390,6 +396,31 @@ export interface LVEmpathyScore {
     score: number; label: string; trend: string; monthly_cost: string
     gap_areas: number; total_gaps: number; weekly_trend: LVEmpathyScoreWeekPoint[]
 }
+export interface LVDeveloperFriction {
+    dev: string; area: string; hours_lost: number; trend: string; top_blocker: string
+}
+export interface LVFrictionTrendPoint {
+    week: string; code_reviews: number; meetings: number; ci_cd: number
+    context_switching: number; ai_friction: number
+}
+export interface LVImpactSimulation {
+    issue: string; current_cost_monthly: number; fix_effort_hours: number
+    projected_savings_monthly: number; roi_pct: number; payback_weeks: number; priority: string
+}
+export interface LVEmpathyDimension {
+    category: string; leader_awareness: number; dev_severity: number
+    gap: number; action_rate: number; color: string
+}
+export interface LVLeadershipBriefing {
+    period: string; top_issues: string[]; actions_taken: number; actions_ignored: number
+    total_hours_recovered: number; total_hours_lost: number; empathy_score_delta: number
+    recommendations: string[]; dollar_impact: string
+}
+export interface LVEscalationItem {
+    issue: string; ignored_since: string; days_ignored: number
+    dev_cost_accumulated: number; escalation_level: string
+    affected_devs: number; auto_escalation_date: string
+}
 export interface LeadershipDashboard {
     friction_heatmap: LVFrictionPoint[]
     empathy_gaps: LVEmpathyGap[]
@@ -398,6 +429,12 @@ export interface LeadershipDashboard {
     translations: LVTranslation[]
     pulse_results: LVPulseResult[]
     empathy_score: LVEmpathyScore
+    developer_frictions: LVDeveloperFriction[]
+    friction_trends: LVFrictionTrendPoint[]
+    impact_simulations: LVImpactSimulation[]
+    empathy_dimensions: LVEmpathyDimension[]
+    leadership_briefing: LVLeadershipBriefing
+    escalations: LVEscalationItem[]
 }
 
 // ── Knowledge Vault API ──

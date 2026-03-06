@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    AreaChart, Area, LineChart, Line, Cell,
+    AreaChart, Area, LineChart, Line, Cell, RadarChart, PolarGrid, PolarAngleAxis,
+    PolarRadiusAxis, Radar, Legend,
 } from 'recharts'
-import { CheckCircle, XCircle, Download, ArrowRight, AlertTriangle } from 'lucide-react'
-import { leadershipApi } from '../api/client'
+import { CheckCircle, XCircle, Download, ArrowRight, AlertTriangle, Clock, TrendingUp, Zap, Shield } from 'lucide-react'
+import { leadershipApi, LVDeveloperFriction, LVFrictionTrendPoint, LVImpactSimulation, LVEmpathyDimension, LVLeadershipBriefing, LVEscalationItem } from '../api/client'
 
 export default function LeadershipView() {
     const [surveyOpen, setSurveyOpen] = useState(false)
@@ -18,6 +19,12 @@ export default function LeadershipView() {
     const [translations, setTranslations] = useState<{ devPain: string; execTranslation: string; kpi: string; dollarImpact: string; priority: string }[]>([])
     const [pulseResults, setPulseResults] = useState<{ week: string; productivity: number; blockerCount: number; aiSentiment: number; responseRate: number }[]>([])
     const [empathyScore, setEmpathyScore] = useState({ score: 0, label: '', trend: '', monthlyCost: '', gapAreas: 0, totalGaps: 0, weeklyTrend: [] as { week: string; score: number }[] })
+    const [developerFrictions, setDeveloperFrictions] = useState<LVDeveloperFriction[]>([])
+    const [frictionTrends, setFrictionTrends] = useState<LVFrictionTrendPoint[]>([])
+    const [impactSimulations, setImpactSimulations] = useState<LVImpactSimulation[]>([])
+    const [empathyDimensions, setEmpathyDimensions] = useState<LVEmpathyDimension[]>([])
+    const [briefing, setBriefing] = useState<LVLeadershipBriefing | null>(null)
+    const [escalations, setEscalations] = useState<LVEscalationItem[]>([])
 
     useEffect(() => {
         leadershipApi.dashboard().then((d) => {
@@ -51,6 +58,12 @@ export default function LeadershipView() {
                 gapAreas: d.empathy_score.gap_areas, totalGaps: d.empathy_score.total_gaps,
                 weeklyTrend: d.empathy_score.weekly_trend,
             })
+            setDeveloperFrictions(d.developer_frictions)
+            setFrictionTrends(d.friction_trends)
+            setImpactSimulations(d.impact_simulations)
+            setEmpathyDimensions(d.empathy_dimensions)
+            setBriefing(d.leadership_briefing)
+            setEscalations(d.escalations)
             setLoading(false)
         }).catch((err) => { console.error('Leadership fetch error:', err); setLoading(false) })
     }, [])
@@ -404,6 +417,290 @@ export default function LeadershipView() {
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
+
+            {/* ══════ AI Leadership Briefing ══════ */}
+            {briefing && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(124,58,237,0.25)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">🧠 AI-Generated Leadership Briefing</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>{briefing.period}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981' }}>
+                                ✅ {briefing.actions_taken} acted
+                            </span>
+                            <span className="text-xs font-bold px-2 py-1 rounded" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444' }}>
+                                ❌ {briefing.actions_ignored} ignored
+                            </span>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                        <div className="text-center p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                            <p className="text-lg font-black" style={{ color: '#10B981' }}>+{briefing.total_hours_recovered}h</p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>Hours Recovered</p>
+                        </div>
+                        <div className="text-center p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                            <p className="text-lg font-black" style={{ color: '#EF4444' }}>{briefing.total_hours_lost}h</p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>Hours Still Lost</p>
+                        </div>
+                        <div className="text-center p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                            <p className="text-lg font-black" style={{ color: briefing.empathy_score_delta >= 0 ? '#10B981' : '#EF4444' }}>
+                                {briefing.empathy_score_delta > 0 ? '+' : ''}{briefing.empathy_score_delta}
+                            </p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>Empathy Δ</p>
+                        </div>
+                        <div className="text-center p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                            <p className="text-sm font-black" style={{ color: '#F59E0B' }}>{briefing.dollar_impact}</p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>Monthly Cost</p>
+                        </div>
+                    </div>
+                    <div className="mb-4">
+                        <p className="text-xs font-semibold text-white mb-2">🔥 Top Issues This Week</p>
+                        <div className="space-y-1.5">
+                            {briefing.top_issues.map((issue, i) => (
+                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.3)' }}>
+                                    <span className="text-xs shrink-0 mt-0.5" style={{ color: '#EF4444' }}>⚠️</span>
+                                    <p className="text-xs" style={{ color: '#E2E8F0' }}>{issue}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                    <div>
+                        <p className="text-xs font-semibold text-white mb-2">💡 AI Recommendations</p>
+                        <div className="space-y-1.5">
+                            {briefing.recommendations.map((rec, i) => (
+                                <div key={i} className="flex items-start gap-2 p-2 rounded-lg" style={{ background: i === 0 ? 'rgba(239,68,68,0.06)' : 'rgba(30,45,74,0.3)', border: i === 0 ? '1px solid rgba(239,68,68,0.15)' : 'none' }}>
+                                    <span className="text-xs shrink-0 mt-0.5" style={{ color: i === 0 ? '#EF4444' : '#00D4FF' }}>{i === 0 ? '🚨' : '→'}</span>
+                                    <p className="text-xs" style={{ color: '#E2E8F0' }}>{rec}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ══════ Per-Developer Friction + Friction Trends ══════ */}
+            <div className="grid grid-cols-2 gap-6">
+                {/* Per-Developer Friction Breakdown */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">👤 Per-Developer Friction Breakdown</h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Which developers are losing the most time — and where?
+                    </p>
+                    <div className="space-y-2">
+                        {(() => {
+                            const devMap: Record<string, { total: number; areas: typeof developerFrictions; worstTrend: string }> = {}
+                            developerFrictions.forEach(f => {
+                                if (!devMap[f.dev]) devMap[f.dev] = { total: 0, areas: [], worstTrend: 'stable' }
+                                devMap[f.dev].total += f.hours_lost
+                                devMap[f.dev].areas.push(f)
+                                if (f.trend === 'increasing') devMap[f.dev].worstTrend = 'increasing'
+                            })
+                            return Object.entries(devMap)
+                                .sort(([, a], [, b]) => b.total - a.total)
+                                .map(([dev, info]) => {
+                                    const trendColor = info.worstTrend === 'increasing' ? '#EF4444' : info.worstTrend === 'decreasing' ? '#10B981' : '#F59E0B'
+                                    return (
+                                        <div key={dev} className="p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid #1E2D4A' }}>
+                                            <div className="flex items-center justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-bold text-white">{dev}</span>
+                                                    <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: `${trendColor}15`, color: trendColor }}>
+                                                        {info.worstTrend === 'increasing' ? '📈 Worsening' : info.worstTrend === 'decreasing' ? '📉 Improving' : '→ Stable'}
+                                                    </span>
+                                                </div>
+                                                <span className="text-sm font-black" style={{ color: '#EF4444' }}>{info.total.toFixed(1)}h/wk</span>
+                                            </div>
+                                            <div className="space-y-1">
+                                                {info.areas.map((a, j) => (
+                                                    <div key={j} className="flex items-center gap-2">
+                                                        <div className="flex-1">
+                                                            <div className="progress-bar h-1.5">
+                                                                <div className="progress-fill" style={{ width: `${(a.hours_lost / 6) * 100}%`, background: a.trend === 'increasing' ? '#EF4444' : a.trend === 'decreasing' ? '#10B981' : '#F59E0B' }} />
+                                                            </div>
+                                                        </div>
+                                                        <span className="text-xs shrink-0" style={{ color: '#94A3B8', width: 90 }}>{a.area}</span>
+                                                        <span className="text-xs font-bold shrink-0" style={{ color: '#E2E8F0', width: 35 }}>{a.hours_lost}h</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )
+                                })
+                        })()}
+                    </div>
+                </div>
+
+                {/* Friction Trends Over Time */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">📉 Friction Trends Over Time</h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Team-wide friction by category over past 6 weeks
+                    </p>
+                    <ResponsiveContainer width="100%" height={220}>
+                        <AreaChart data={frictionTrends}>
+                            <defs>
+                                <linearGradient id="frTrendGrad" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="5%" stopColor="#EF4444" stopOpacity={0.12} />
+                                    <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                                </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#1E2D4A" />
+                            <XAxis dataKey="week" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                            <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} unit="h" />
+                            <Tooltip contentStyle={{ background: '#0F1629', border: '1px solid #1E2D4A', borderRadius: 8, fontSize: 12 }} />
+                            <Area type="monotone" dataKey="code_reviews" stackId="1" stroke="#EF4444" fill="#EF4444" fillOpacity={0.2} name="Code Reviews" />
+                            <Area type="monotone" dataKey="meetings" stackId="1" stroke="#F59E0B" fill="#F59E0B" fillOpacity={0.2} name="Meetings" />
+                            <Area type="monotone" dataKey="ci_cd" stackId="1" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.2} name="CI/CD" />
+                            <Area type="monotone" dataKey="context_switching" stackId="1" stroke="#7C3AED" fill="#7C3AED" fillOpacity={0.2} name="Context Switching" />
+                            <Area type="monotone" dataKey="ai_friction" stackId="1" stroke="#EC4899" fill="#EC4899" fillOpacity={0.2} name="AI Friction" />
+                        </AreaChart>
+                    </ResponsiveContainer>
+                    <div className="flex flex-wrap items-center gap-3 mt-2 text-xs" style={{ color: '#94A3B8' }}>
+                        {[{ label: 'Code Reviews', color: '#EF4444' }, { label: 'Meetings', color: '#F59E0B' }, { label: 'CI/CD', color: '#00D4FF' }, { label: 'Context Switch', color: '#7C3AED' }, { label: 'AI Friction', color: '#EC4899' }].map(l => (
+                            <span key={l.label} className="flex items-center gap-1"><span className="w-2.5 h-1.5 rounded inline-block" style={{ background: l.color }} />{l.label}</span>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* ══════ Impact Simulation + Empathy Dimensions ══════ */}
+            <div className="grid grid-cols-2 gap-6">
+                {/* Impact Simulation — ROI Calculator */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">💰 Impact Simulation — Fix ROI</h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        "If we fix X, here's the projected improvement" — automated business case builder
+                    </p>
+                    <div className="space-y-3">
+                        {impactSimulations.map((sim, i) => {
+                            const prioColor = sim.priority === 'critical' ? '#EF4444' : sim.priority === 'high' ? '#F59E0B' : '#00D4FF'
+                            return (
+                                <div key={i} className="p-4 rounded-xl" style={{ background: `${prioColor}06`, border: `1px solid ${prioColor}20` }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-semibold text-white">{sim.issue}</p>
+                                        <span className="text-xs px-1.5 py-0.5 rounded font-semibold" style={{ background: `${prioColor}15`, color: prioColor }}>
+                                            {sim.priority}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-4 gap-2">
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: '#EF4444' }}>${(sim.current_cost_monthly / 1000).toFixed(0)}K</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>Monthly cost</p>
+                                        </div>
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: '#10B981' }}>${(sim.projected_savings_monthly / 1000).toFixed(1)}K</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>Savings/mo</p>
+                                        </div>
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: '#7C3AED' }}>{sim.roi_pct}%</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>ROI</p>
+                                        </div>
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: '#F59E0B' }}>{sim.payback_weeks}w</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>Payback</p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2">
+                                        <div className="progress-bar h-1.5">
+                                            <div className="progress-fill" style={{ width: `${Math.min(sim.roi_pct / 10, 100)}%`, background: `linear-gradient(90deg, ${prioColor}88, ${prioColor})` }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Empathy Dimensions — Gap Breakdown */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">🎯 Empathy Gap Dimensions</h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Per-category leader awareness vs developer severity — where are the blind spots?
+                    </p>
+                    <ResponsiveContainer width="100%" height={220}>
+                        <RadarChart data={empathyDimensions}>
+                            <PolarGrid stroke="#1E2D4A" />
+                            <PolarAngleAxis dataKey="category" tick={{ fill: '#94A3B8', fontSize: 10 }} />
+                            <PolarRadiusAxis tick={{ fill: '#94A3B8', fontSize: 9 }} domain={[0, 100]} axisLine={false} />
+                            <Radar name="Dev Severity" dataKey="dev_severity" stroke="#EF4444" fill="#EF4444" fillOpacity={0.15} strokeWidth={2} />
+                            <Radar name="Leader Awareness" dataKey="leader_awareness" stroke="#00D4FF" fill="#00D4FF" fillOpacity={0.1} strokeWidth={2} />
+                        </RadarChart>
+                    </ResponsiveContainer>
+                    <div className="space-y-2 mt-3">
+                        {empathyDimensions.map((dim, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: dim.color }} />
+                                <span className="text-xs text-white flex-1">{dim.category}</span>
+                                <div className="flex items-center gap-3 text-xs">
+                                    <span style={{ color: '#EF4444' }}>Dev: {dim.dev_severity}%</span>
+                                    <span style={{ color: '#00D4FF' }}>Lead: {dim.leader_awareness}%</span>
+                                    <span className="font-bold" style={{ color: dim.gap > 40 ? '#EF4444' : dim.gap > 20 ? '#F59E0B' : '#10B981' }}>
+                                        Gap: {dim.gap}
+                                    </span>
+                                    <span style={{ color: dim.action_rate > 0 ? '#10B981' : '#EF4444' }}>
+                                        {dim.action_rate > 0 ? `${dim.action_rate}% acted` : 'No action'}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: '#94A3B8' }}>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-1.5 rounded inline-block" style={{ background: '#EF4444' }} /> Developer Pain</span>
+                        <span className="flex items-center gap-1"><span className="w-2.5 h-1.5 rounded inline-block" style={{ background: '#00D4FF' }} /> Leader Awareness</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* ══════ Escalation Tracker ══════ */}
+            {escalations.length > 0 && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(239,68,68,0.2)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">🚨 Auto-Escalation Tracker</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                Issues ignored too long — automatically escalated to next management level
+                            </p>
+                        </div>
+                        <span className="badge-red">{escalations.length} escalating</span>
+                    </div>
+                    <div className="space-y-3">
+                        {escalations.map((esc, i) => {
+                            const levelColor = esc.escalation_level === 'vp' ? '#EF4444' : esc.escalation_level === 'director' ? '#F59E0B' : '#00D4FF'
+                            return (
+                                <div key={i} className="p-4 rounded-xl" style={{ background: `${levelColor}06`, border: `1px solid ${levelColor}20` }}>
+                                    <div className="flex items-start justify-between mb-2">
+                                        <div>
+                                            <p className="text-xs font-semibold text-white">{esc.issue}</p>
+                                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                                Ignored since {esc.ignored_since} · {esc.affected_devs} devs affected
+                                            </p>
+                                        </div>
+                                        <span className="text-xs px-2 py-0.5 rounded font-bold uppercase" style={{ background: `${levelColor}15`, color: levelColor }}>
+                                            {esc.escalation_level}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: '#EF4444' }}>{esc.days_ignored}d</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>Days Ignored</p>
+                                        </div>
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: '#F59E0B' }}>${esc.dev_cost_accumulated.toLocaleString()}</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>Cost Accumulated</p>
+                                        </div>
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-xs font-black" style={{ color: levelColor }}>{esc.auto_escalation_date}</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 9 }}>Auto-Escalation</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Bottom Insight */}
             <div

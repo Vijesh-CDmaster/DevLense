@@ -1,7 +1,8 @@
 from app.models.leadership import (
     FrictionPoint, EmpathyGap, ActionLoopItem, DecisionImpact,
     Translation, PulseResult, EmpathyScoreDetail, EmpathyScoreWeekPoint,
-    LeadershipDashboard,
+    LeadershipDashboard, DeveloperFriction, FrictionTrendPoint,
+    ImpactSimulation, EmpathyDimension, LeadershipBriefing, EscalationItem,
 )
 
 FRICTION_HEATMAP = [
@@ -164,6 +165,112 @@ EMPATHY_SCORE = EmpathyScoreDetail(
 )
 
 
+DEVELOPER_FRICTIONS = [
+    DeveloperFriction(dev="Sarah Chen", area="Code Reviews", hours_lost=5.1, trend="increasing", top_blocker="Waiting on senior reviewer — only 2 available"),
+    DeveloperFriction(dev="Sarah Chen", area="Meetings", hours_lost=2.2, trend="stable", top_blocker="Sprint planning takes full morning"),
+    DeveloperFriction(dev="Marcus Rodriguez", area="Code Reviews", hours_lost=3.8, trend="stable", top_blocker="Cross-team PRs require 3 reviewers"),
+    DeveloperFriction(dev="Marcus Rodriguez", area="CI/CD Waits", hours_lost=2.4, trend="decreasing", top_blocker="Feature branch builds queued behind main"),
+    DeveloperFriction(dev="Marcus Rodriguez", area="Context Switching", hours_lost=1.8, trend="increasing", top_blocker="Slack interruptions during deep work"),
+    DeveloperFriction(dev="Priya Patel", area="Meetings", hours_lost=3.4, trend="increasing", top_blocker="Architecture review meetings doubled"),
+    DeveloperFriction(dev="Priya Patel", area="AI Tool Friction", hours_lost=1.9, trend="increasing", top_blocker="AI suggestions wrong for complex patterns — time wasted reviewing"),
+    DeveloperFriction(dev="Jake Morrison", area="Code Reviews", hours_lost=4.6, trend="stable", top_blocker="Junior PRs get deprioritized"),
+    DeveloperFriction(dev="Jake Morrison", area="Environment Setup", hours_lost=1.3, trend="decreasing", top_blocker="Docker build cache invalidation"),
+    DeveloperFriction(dev="Alex Kim", area="Meetings", hours_lost=3.1, trend="stable", top_blocker="3 standups per day across squads"),
+    DeveloperFriction(dev="Alex Kim", area="CI/CD Waits", hours_lost=2.1, trend="stable", top_blocker="Integration tests take 38 minutes"),
+    DeveloperFriction(dev="Alex Kim", area="Context Switching", hours_lost=1.6, trend="increasing", top_blocker="On-call pages during sprint work"),
+]
+
+FRICTION_TRENDS = [
+    FrictionTrendPoint(week="Wk 1", code_reviews=3.8, meetings=2.5, ci_cd=2.1, context_switching=1.2, ai_friction=0.8),
+    FrictionTrendPoint(week="Wk 2", code_reviews=4.0, meetings=2.6, ci_cd=2.0, context_switching=1.3, ai_friction=0.9),
+    FrictionTrendPoint(week="Wk 3", code_reviews=4.2, meetings=2.9, ci_cd=1.8, context_switching=1.4, ai_friction=1.0),
+    FrictionTrendPoint(week="Wk 4", code_reviews=4.1, meetings=2.7, ci_cd=1.6, context_switching=1.5, ai_friction=1.1),
+    FrictionTrendPoint(week="Wk 5", code_reviews=4.3, meetings=2.8, ci_cd=1.5, context_switching=1.4, ai_friction=1.2),
+    FrictionTrendPoint(week="Wk 6", code_reviews=4.2, meetings=2.8, ci_cd=1.4, context_switching=1.5, ai_friction=1.1),
+]
+
+IMPACT_SIMULATIONS = [
+    ImpactSimulation(
+        issue="Code review SLA (48h → 24h)",
+        current_cost_monthly=18000, fix_effort_hours=40,
+        projected_savings_monthly=12600, roi_pct=315, payback_weeks=1.3, priority="critical",
+    ),
+    ImpactSimulation(
+        issue="Reduce meetings to 6/week max",
+        current_cost_monthly=12000, fix_effort_hours=8,
+        projected_savings_monthly=7200, roi_pct=900, payback_weeks=0.4, priority="critical",
+    ),
+    ImpactSimulation(
+        issue="CI/CD pipeline parallelisation",
+        current_cost_monthly=7000, fix_effort_hours=80,
+        projected_savings_monthly=5600, roi_pct=70, payback_weeks=5.7, priority="high",
+    ),
+    ImpactSimulation(
+        issue="AI tool seniority-aware modes",
+        current_cost_monthly=9000, fix_effort_hours=60,
+        projected_savings_monthly=6300, roi_pct=105, payback_weeks=3.8, priority="high",
+    ),
+    ImpactSimulation(
+        issue="Fair on-call rotation automation",
+        current_cost_monthly=4000, fix_effort_hours=24,
+        projected_savings_monthly=3200, roi_pct=133, payback_weeks=3.0, priority="medium",
+    ),
+]
+
+EMPATHY_DIMENSIONS = [
+    EmpathyDimension(category="Process", leader_awareness=35, dev_severity=88, gap=53, action_rate=33, color="#EF4444"),
+    EmpathyDimension(category="Culture", leader_awareness=28, dev_severity=82, gap=54, action_rate=0, color="#F59E0B"),
+    EmpathyDimension(category="Tooling", leader_awareness=45, dev_severity=71, gap=26, action_rate=67, color="#00D4FF"),
+    EmpathyDimension(category="AI Tooling", leader_awareness=15, dev_severity=68, gap=53, action_rate=50, color="#7C3AED"),
+    EmpathyDimension(category="Operations", leader_awareness=22, dev_severity=79, gap=57, action_rate=0, color="#EC4899"),
+]
+
+LEADERSHIP_BRIEFING = LeadershipBriefing(
+    period="Week of Feb 24 – Mar 2, 2026",
+    top_issues=[
+        "Code review latency increased to 52hrs avg — deployment frequency dropped 35%",
+        "Meeting load at 12.4 hrs/dev/week — exceeds 8hr deep-work threshold",
+        "2 senior engineers flagged as attrition risk due to unfair on-call rotation",
+        "AI tool ROI is negative for senior developers — they spend more time reviewing AI output than writing code",
+        "CI/CD pipeline improved (45min → 12min) — dev satisfaction up 87%",
+    ],
+    actions_taken=2,
+    actions_ignored=2,
+    total_hours_recovered=22.9,
+    total_hours_lost=228,
+    empathy_score_delta=-5,
+    recommendations=[
+        "URGENT: Implement 24hr code review SLA — projected to save $12.6K/month (ROI: 315%)",
+        "Reduce mandatory meetings to 6/week cap — 900% ROI, 0.4 week payback",
+        "Address on-call rotation before Q2 — $340K attrition risk",
+        "Deploy seniority-aware AI modes — stops negative ROI for experienced engineers",
+        "Schedule skip-level 1:1s with devs flagged as high-friction",
+    ],
+    dollar_impact="$48,000/month total developer friction cost",
+)
+
+ESCALATIONS = [
+    EscalationItem(
+        issue="Too many mandatory meetings (>12/week)",
+        ignored_since="3 weeks ago", days_ignored=21,
+        dev_cost_accumulated=8400, escalation_level="director",
+        affected_devs=12, auto_escalation_date="Mar 10, 2026",
+    ),
+    EscalationItem(
+        issue="On-call rotation unfair — same 3 people every week",
+        ignored_since="3 weeks ago", days_ignored=21,
+        dev_cost_accumulated=6300, escalation_level="director",
+        affected_devs=3, auto_escalation_date="Mar 10, 2026",
+    ),
+    EscalationItem(
+        issue="Sprint planning takes full day — devs lose momentum",
+        ignored_since="1 week ago", days_ignored=7,
+        dev_cost_accumulated=2100, escalation_level="team-lead",
+        affected_devs=10, auto_escalation_date="Mar 17, 2026",
+    ),
+]
+
+
 def get_full_dashboard() -> LeadershipDashboard:
     return LeadershipDashboard(
         friction_heatmap=FRICTION_HEATMAP,
@@ -173,4 +280,10 @@ def get_full_dashboard() -> LeadershipDashboard:
         translations=TRANSLATIONS,
         pulse_results=PULSE_RESULTS,
         empathy_score=EMPATHY_SCORE,
+        developer_frictions=DEVELOPER_FRICTIONS,
+        friction_trends=FRICTION_TRENDS,
+        impact_simulations=IMPACT_SIMULATIONS,
+        empathy_dimensions=EMPATHY_DIMENSIONS,
+        leadership_briefing=LEADERSHIP_BRIEFING,
+        escalations=ESCALATIONS,
     )
