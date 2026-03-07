@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Code2, ArrowRight } from 'lucide-react'
+import { useAuth } from '../auth/AuthContext'
 
 export default function Login() {
     const navigate = useNavigate()
+    const { login } = useAuth()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
@@ -25,8 +27,7 @@ export default function Login() {
                 throw new Error(data?.detail || 'Invalid email or password')
             }
             const data = await res.json()
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('user', JSON.stringify(data.user))
+            login(data.token, data.user)
             navigate('/overview', { replace: true })
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Login failed')

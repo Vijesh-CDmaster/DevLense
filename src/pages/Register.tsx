@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Code2, UserPlus } from 'lucide-react'
+import { useAuth } from '../auth/AuthContext'
 
 export default function Register() {
     const navigate = useNavigate()
+    const { login } = useAuth()
     const [name, setName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
@@ -37,8 +39,7 @@ export default function Register() {
                 throw new Error(data?.detail || 'Registration failed')
             }
             const data = await res.json()
-            localStorage.setItem('token', data.token)
-            localStorage.setItem('user', JSON.stringify(data.user))
+            login(data.token, data.user)
             navigate('/overview', { replace: true })
         } catch (err: unknown) {
             setError(err instanceof Error ? err.message : 'Registration failed')
