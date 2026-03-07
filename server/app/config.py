@@ -18,7 +18,7 @@ class Settings:
 
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql+asyncpg://postgres:postgres@localhost:5432/devlense",
+        "postgresql+asyncpg://postgres:nisha%40123@localhost:5432/devlense",
     )
 
     JWT_SECRET: str = os.getenv("JWT_SECRET", "devlense-secret-change-in-prod")
