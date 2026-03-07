@@ -14,6 +14,13 @@ from app.data.truth_lens_data import (
     SELF_REPORT_COMPARATOR,
     WEEKLY_DRIFT,
     get_full_dashboard,
+    BELIEF_AUDITS,
+    BIAS_TYPOLOGIES,
+    CALIBRATION_SCORES,
+    DECISION_SIGNALS,
+    CONTAMINATION_ASSESSMENTS,
+    POST_DECISION_OUTCOMES,
+    ORG_CONTAMINATION,
 )
 from app.models.truth_lens import (
     AlertConfig,
@@ -43,6 +50,8 @@ from app.services.slack_service import (
     send_alert_to_manager,
     store_survey_response,
 )
+from app.services.belief_audit import compute_belief_summary
+from app.services.contamination_tracker import compute_contamination_summary
 
 router = APIRouter(prefix="/api/truth-lens", tags=["Truth Lens"])
 
@@ -212,3 +221,52 @@ async def commit_telemetry(
     if not detail:
         return {"error": "Commit not found or GitHub not configured"}
     return compute_telemetry_gain(detail, avg_minutes)
+
+
+# ══════ Belief Audit Engine ══════
+
+@router.get("/belief-audits")
+async def belief_audits():
+    return BELIEF_AUDITS
+
+
+@router.get("/bias-typologies")
+async def bias_typologies():
+    return BIAS_TYPOLOGIES
+
+
+@router.get("/calibration-scores")
+async def calibration_scores():
+    return CALIBRATION_SCORES
+
+
+@router.get("/belief-summary")
+async def belief_summary():
+    return compute_belief_summary()
+
+
+# ══════ Decision Contamination Tracker ══════
+
+@router.get("/decision-signals")
+async def decision_signals():
+    return DECISION_SIGNALS
+
+
+@router.get("/contamination-assessments")
+async def contamination_assessments():
+    return CONTAMINATION_ASSESSMENTS
+
+
+@router.get("/post-decision-outcomes")
+async def post_decision_outcomes():
+    return POST_DECISION_OUTCOMES
+
+
+@router.get("/org-contamination")
+async def org_contamination():
+    return ORG_CONTAMINATION
+
+
+@router.get("/contamination-summary")
+async def contamination_summary():
+    return compute_contamination_summary()

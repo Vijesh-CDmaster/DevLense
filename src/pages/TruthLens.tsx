@@ -3,8 +3,8 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
     BarChart, Bar, AreaChart, Area,
 } from 'recharts'
-import { Send, Bell, ArrowRight, TrendingUp, TrendingDown, Clock, MessageSquare, CheckCircle } from 'lucide-react'
-import { truthLensApi, type TruthLensDashboard } from '../api/client'
+import { Send, Bell, ArrowRight, TrendingUp, TrendingDown, Clock, MessageSquare, CheckCircle, AlertTriangle, Shield, Target, Activity, Eye, Zap, FileWarning } from 'lucide-react'
+import { truthLensApi, type TruthLensDashboard, type TLDevBeliefAudit, type TLBiasTypology, type TLCalibrationScore, type TLBeliefSummary, type TLDecisionSignal, type TLContaminationAssessment, type TLPostDecisionOutcome, type TLOrgContaminationSummary, type TLContaminationSummary } from '../api/client'
 
 /* ─────── Local types for UI (camelCase mapping) ─────── */
 
@@ -58,6 +58,19 @@ export default function TruthLens() {
     const [illusionScore, setIllusionScore] = useState({ score: 0, drift_rate: '', threshold: 20, dimensions: [] as { dimension: string; belief: number; reality: number; icon: string }[] })
     const [gauges, setGauges] = useState({ team_belief: '', telemetry_reality: '', belief_sub: '', reality_sub: '' })
 
+    // Belief Audit Engine state
+    const [beliefAudits, setBeliefAudits] = useState<TLDevBeliefAudit[]>([])
+    const [biasTypologies, setBiasTypologies] = useState<TLBiasTypology[]>([])
+    const [calibrationScores, setCalibrationScores] = useState<TLCalibrationScore[]>([])
+    const [beliefSummary, setBeliefSummary] = useState<TLBeliefSummary | null>(null)
+
+    // Decision Contamination Tracker state
+    const [decisionSignals, setDecisionSignals] = useState<TLDecisionSignal[]>([])
+    const [contaminationAssessments, setContaminationAssessments] = useState<TLContaminationAssessment[]>([])
+    const [postDecisionOutcomes, setPostDecisionOutcomes] = useState<TLPostDecisionOutcome[]>([])
+    const [orgContamination, setOrgContamination] = useState<TLOrgContaminationSummary | null>(null)
+    const [contaminationSummary, setContaminationSummary] = useState<TLContaminationSummary | null>(null)
+
     useEffect(() => {
         truthLensApi.dashboard(alertThreshold).then((data) => {
             setDivergenceData(data.divergence_timeline)
@@ -74,6 +87,23 @@ export default function TruthLens() {
             setIllusionScore(data.illusion_score)
             setGauges(data.gauges)
             setAlertThreshold(data.alert_config.threshold_pct)
+            // Belief Audit Engine
+            if (data.belief_audits) setBeliefAudits(data.belief_audits)
+            if (data.bias_typologies) setBiasTypologies(data.bias_typologies)
+            if (data.calibration_scores) setCalibrationScores(data.calibration_scores)
+            // Decision Contamination Tracker
+            if (data.decision_signals) setDecisionSignals(data.decision_signals)
+            if (data.contamination_assessments) setContaminationAssessments(data.contamination_assessments)
+            if (data.post_decision_outcomes) setPostDecisionOutcomes(data.post_decision_outcomes)
+            if (data.org_contamination) setOrgContamination(data.org_contamination)
+            // Fetch computed summaries separately
+            Promise.all([
+                truthLensApi.beliefSummary(),
+                truthLensApi.contaminationSummary(),
+            ]).then(([bs, cs]) => {
+                setBeliefSummary(bs)
+                setContaminationSummary(cs)
+            })
             setLoading(false)
         }).catch(() => setLoading(false))
     }, [])
@@ -583,6 +613,459 @@ export default function TruthLens() {
                         <span className="text-red-400 font-semibold">~$2.4M/year</span> for this team.
                         The perception drift is <span className="text-amber-400 font-semibold">accelerating</span> — without intervention,
                         the gap will exceed 50% within 6 weeks.
+                    </p>
+                </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════
+                ██  BELIEF AUDIT ENGINE
+                ══════════════════════════════════════════════════════════════════ */}
+            <div className="flex items-center gap-3 mt-4 mb-2">
+                <Eye size={20} style={{ color: '#00D4FF' }} />
+                <div>
+                    <h2 className="text-lg font-bold text-white">Belief Audit Engine</h2>
+                    <p className="text-xs" style={{ color: '#94A3B8' }}>
+                        Daily self-report vs telemetry per developer — bias detection, calibration scoring, 20% alert governance
+                    </p>
+                </div>
+            </div>
+
+            {/* Belief Audit Summary KPIs */}
+            {beliefSummary && (
+                <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+                    {[
+                        { label: 'Avg Org Gap', value: `${beliefSummary.avg_org_gap_pts.toFixed(1)}pts`, color: '#EF4444' },
+                        { label: 'Miscalibrated', value: String(beliefSummary.miscalibrated_developers), color: '#F59E0B' },
+                        { label: 'Well Calibrated', value: String(beliefSummary.well_calibrated), color: '#10B981' },
+                        { label: 'Active Biases', value: String(beliefSummary.active_bias_types), color: '#7C3AED' },
+                        { label: 'Worst Calibrated', value: beliefSummary.worst_calibrated, color: '#EF4444' },
+                        { label: 'Devs Notified', value: String(beliefSummary.developers_notified), color: '#F59E0B' },
+                    ].map((kpi) => (
+                        <div key={kpi.label} className="glass-card p-3 text-center">
+                            <p className="text-lg font-black" style={{ color: kpi.color }}>{kpi.value}</p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>{kpi.label}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Developer Belief Audit – Daily Heatmap */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-bold text-white mb-1">📊 Developer Daily Belief vs Reality</h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Mon–Fri daily gap per developer — trend alerts fire at 20% sustained gap
+                </p>
+                <div className="space-y-4">
+                    {beliefAudits.map((audit) => {
+                        const statusColors: Record<string, string> = {
+                            escalated: '#EF4444', notified: '#F59E0B', monitoring: '#00D4FF', none: '#10B981',
+                        }
+                        const sc = statusColors[audit.alert_status] || '#94A3B8'
+                        return (
+                            <div key={audit.developer} className="p-4 rounded-xl" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold"
+                                            style={{ background: `${sc}22`, color: sc, border: `1px solid ${sc}44` }}>
+                                            {audit.developer[0]}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-white">{audit.developer}</p>
+                                            <p className="text-xs" style={{ color: '#94A3B8' }}>{audit.week_label} · {audit.bias_pattern}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                            style={{ background: `${sc}15`, color: sc, border: `1px solid ${sc}33` }}>
+                                            {audit.alert_status.toUpperCase()}
+                                        </span>
+                                        <span className="text-xs" style={{ color: '#94A3B8' }}>
+                                            Streak: {audit.streak_days}d
+                                        </span>
+                                    </div>
+                                </div>
+                                {/* Daily bars */}
+                                <div className="grid grid-cols-5 gap-2">
+                                    {audit.daily.map((d) => {
+                                        const gapAbs = Math.abs(d.gap)
+                                        const gapColor = gapAbs > 30 ? '#EF4444' : gapAbs > 15 ? '#F59E0B' : '#10B981'
+                                        return (
+                                            <div key={d.day} className="p-2 rounded-lg text-center" style={{ background: `${gapColor}08`, border: `1px solid ${gapColor}20` }}>
+                                                <p className="text-xs font-bold" style={{ color: '#94A3B8' }}>{d.day}</p>
+                                                <div className="flex justify-center gap-2 mt-1">
+                                                    <div>
+                                                        <p className="text-xs" style={{ color: '#10B981' }}>{d.self_reported}%</p>
+                                                        <p className="text-xs" style={{ color: '#94A3B8', fontSize: 9 }}>self</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs" style={{ color: '#EF4444' }}>{d.telemetry}%</p>
+                                                        <p className="text-xs" style={{ color: '#94A3B8', fontSize: 9 }}>real</p>
+                                                    </div>
+                                                </div>
+                                                <p className="text-xs font-bold mt-1" style={{ color: gapColor }}>{d.gap > 0 ? '+' : ''}{d.gap}pts</p>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                                {/* Summary row */}
+                                <div className="flex items-center gap-4 mt-3 pt-2" style={{ borderTop: '1px solid #1E2D4A' }}>
+                                    <span className="text-xs" style={{ color: '#94A3B8' }}>
+                                        Avg: Self <span style={{ color: '#10B981' }}>{audit.avg_self_reported}%</span> vs
+                                        Real <span style={{ color: '#EF4444' }}>{audit.avg_telemetry}%</span> =
+                                        Gap <span className="font-bold" style={{ color: audit.avg_gap > 20 ? '#EF4444' : '#F59E0B' }}>{audit.avg_gap}pts</span>
+                                    </span>
+                                    {audit.bias_type !== 'None' && (
+                                        <span className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(124,58,237,0.12)', color: '#A78BFA', border: '1px solid rgba(124,58,237,0.25)' }}>
+                                            Bias: {audit.bias_type}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Bias Typology + Calibration Scores side by side */}
+            <div className="grid grid-cols-2 gap-6">
+                {/* Bias Typology Cards */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                        <AlertTriangle size={14} style={{ color: '#F59E0B' }} />
+                        Bias Typology Classification
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Systematic perception errors detected across the org
+                    </p>
+                    <div className="space-y-3">
+                        {biasTypologies.map((bias) => {
+                            const sevColors: Record<string, string> = { critical: '#EF4444', high: '#F59E0B', moderate: '#00D4FF', low: '#10B981' }
+                            const bc = sevColors[bias.severity] || '#94A3B8'
+                            return (
+                                <div key={bias.type} className="p-3 rounded-xl" style={{ background: `${bc}08`, border: `1px solid ${bc}20` }}>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="text-sm font-bold" style={{ color: bc }}>{bias.type}</p>
+                                        <span className="text-xs px-2 py-0.5 rounded-full font-bold"
+                                            style={{ background: `${bc}15`, color: bc }}>
+                                            {bias.severity.toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs mb-2" style={{ color: '#94A3B8' }}>{bias.description}</p>
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-1">
+                                            {bias.affected_developers.map((dev) => (
+                                                <span key={dev} className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(30,45,74,0.6)', color: '#94A3B8' }}>
+                                                    {dev}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <span className="text-xs font-bold" style={{ color: bc }}>{bias.prevalence_pct}%</span>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+
+                {/* Calibration Scores Table */}
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                        <Target size={14} style={{ color: '#00D4FF' }} />
+                        Calibration Scores
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        0–100 accuracy score per developer — how well-calibrated is their self-assessment?
+                    </p>
+                    <div className="space-y-2">
+                        {calibrationScores.map((cs) => {
+                            const scoreColor = cs.score >= 80 ? '#10B981' : cs.score >= 50 ? '#F59E0B' : '#EF4444'
+                            const trendIcon = cs.trend === 'improving' ? '📈' : cs.trend === 'worsening' ? '📉' : '➡️'
+                            return (
+                                <div key={cs.developer} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-black"
+                                        style={{ background: `${scoreColor}15`, color: scoreColor, border: `2px solid ${scoreColor}44` }}>
+                                        {cs.score}
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-medium text-white">{cs.developer}</p>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                            {cs.direction === 'over' ? 'Over-estimates' : cs.direction === 'under' ? 'Under-estimates' : 'Well-calibrated'} · Avg divergence: {cs.avg_divergence_pts}pts · {cs.weeks_tracked} weeks
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm">{trendIcon}</p>
+                                        <p className="text-xs" style={{ color: cs.trend === 'improving' ? '#10B981' : cs.trend === 'worsening' ? '#EF4444' : '#94A3B8' }}>
+                                            {cs.trend}
+                                        </p>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </div>
+
+            {/* ══════════════════════════════════════════════════════════════════
+                ██  DECISION CONTAMINATION TRACKER
+                ══════════════════════════════════════════════════════════════════ */}
+            <div className="flex items-center gap-3 mt-4 mb-2">
+                <Shield size={20} style={{ color: '#7C3AED' }} />
+                <div>
+                    <h2 className="text-lg font-bold text-white">Decision Contamination Tracker</h2>
+                    <p className="text-xs" style={{ color: '#94A3B8' }}>
+                        When perception gaps infect business decisions — Evidence Quality Scores, post-decision audits, and organizational contamination mapping
+                    </p>
+                </div>
+            </div>
+
+            {/* Contamination Summary KPIs */}
+            {contaminationSummary && (
+                <div className="grid grid-cols-3 lg:grid-cols-7 gap-3">
+                    {[
+                        { label: 'Decisions Tracked', value: String(contaminationSummary.total_decisions_tracked), color: '#00D4FF' },
+                        { label: 'Critical', value: String(contaminationSummary.critical_contamination), color: '#EF4444' },
+                        { label: 'High Risk', value: String(contaminationSummary.high_contamination), color: '#F59E0B' },
+                        { label: 'Total Cost', value: `$${(contaminationSummary.total_contamination_cost / 1000).toFixed(1)}K`, color: '#EF4444' },
+                        { label: 'Avg EQS', value: contaminationSummary.avg_evidence_quality_score.toFixed(0), color: contaminationSummary.avg_evidence_quality_score < 40 ? '#EF4444' : '#F59E0B' },
+                        { label: 'Open Signals', value: String(contaminationSummary.open_signals), color: '#F59E0B' },
+                        { label: 'Preventable', value: contaminationSummary.estimated_preventable_cost, color: '#7C3AED' },
+                    ].map((kpi) => (
+                        <div key={kpi.label} className="glass-card p-3 text-center">
+                            <p className="text-lg font-black" style={{ color: kpi.color }}>{kpi.value}</p>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>{kpi.label}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+
+            {/* Decision Signals */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                    <Activity size={14} style={{ color: '#F59E0B' }} />
+                    Decision Signal Detection
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Business decisions detected that may be contaminated by perception gaps
+                </p>
+                <div className="space-y-2">
+                    {decisionSignals.map((sig) => {
+                        const statusColors: Record<string, string> = {
+                            detected: '#F59E0B', assessed: '#00D4FF', tracked: '#7C3AED', closed: '#10B981',
+                        }
+                        const sigC = statusColors[sig.status] || '#94A3B8'
+                        return (
+                            <div key={sig.id} className="flex items-center gap-4 p-3 rounded-xl" style={{ background: `${sigC}06`, border: `1px solid ${sigC}18` }}>
+                                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${sigC}15` }}>
+                                    <Zap size={14} style={{ color: sigC }} />
+                                </div>
+                                <div className="flex-1">
+                                    <p className="text-sm font-medium text-white">{sig.event}</p>
+                                    <p className="text-xs" style={{ color: '#94A3B8' }}>Team {sig.team} · {sig.detection_signal}</p>
+                                </div>
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                                    style={{ background: `${sigC}15`, color: sigC }}>
+                                    {sig.status.toUpperCase()}
+                                </span>
+                                <span className="text-xs" style={{ color: '#94A3B8' }}>{sig.detected_at}</span>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Contamination Assessments */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                    <FileWarning size={14} style={{ color: '#EF4444' }} />
+                    Contamination Assessment
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Evidence Quality Score (EQS) breakdown — how trustworthy was the data behind each decision?
+                </p>
+                <div className="space-y-4">
+                    {contaminationAssessments.map((ca) => {
+                        const riskColors: Record<string, string> = { critical: '#EF4444', high: '#F59E0B', moderate: '#00D4FF', low: '#10B981' }
+                        const rc = riskColors[ca.contamination_risk] || '#94A3B8'
+                        const eqsColor = ca.evidence_quality_score < 30 ? '#EF4444' : ca.evidence_quality_score < 50 ? '#F59E0B' : ca.evidence_quality_score < 70 ? '#00D4FF' : '#10B981'
+                        return (
+                            <div key={ca.decision_signal_id} className="p-4 rounded-xl" style={{ background: `${rc}06`, border: `1px solid ${rc}18` }}>
+                                <div className="flex items-center justify-between mb-3">
+                                    <div>
+                                        <p className="text-sm font-bold text-white">{ca.event}</p>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>Team {ca.team} · Signal {ca.decision_signal_id}</p>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="text-center">
+                                            <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-black"
+                                                style={{ background: `${eqsColor}15`, color: eqsColor, border: `2px solid ${eqsColor}44` }}>
+                                                {ca.evidence_quality_score}
+                                            </div>
+                                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>EQS</p>
+                                        </div>
+                                        <span className="text-xs font-bold px-2 py-1 rounded-full"
+                                            style={{ background: `${rc}15`, color: rc }}>
+                                            {ca.contamination_risk.toUpperCase()}
+                                        </span>
+                                    </div>
+                                </div>
+                                {/* EQS Factor Breakdown */}
+                                <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 mb-3">
+                                    {[
+                                        { label: 'Self-Report Weeks', value: String(ca.self_report_weeks) },
+                                        { label: 'Belief Calibration', value: String(ca.belief_calibration) },
+                                        { label: 'Bias Direction', value: ca.bias_direction },
+                                        { label: 'Telemetry Divergence', value: `${ca.telemetry_divergence}%` },
+                                        { label: 'Days Since Cal.', value: String(ca.days_since_calibration) },
+                                    ].map((f) => (
+                                        <div key={f.label} className="p-2 rounded-lg text-center" style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid #1E2D4A' }}>
+                                            <p className="text-xs font-bold text-white">{f.value}</p>
+                                            <p className="text-xs" style={{ color: '#94A3B8', fontSize: 9 }}>{f.label}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                {/* Prediction + Action */}
+                                <div className="flex items-center justify-between p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.4)', border: '1px solid #1E2D4A' }}>
+                                    <div className="flex items-center gap-4">
+                                        <span className="text-xs" style={{ color: '#94A3B8' }}>
+                                            Committed: <span className="font-bold text-white">{ca.committed_value}</span> → Baseline: <span className="font-bold text-white">{ca.baseline_value}</span>
+                                            <span className="font-bold ml-1" style={{ color: '#EF4444' }}>(+{ca.spike_pct}% spike)</span>
+                                        </span>
+                                        <span className="text-xs font-bold" style={{ color: '#EF4444' }}>
+                                            {ca.predicted_failure_pct}% failure probability
+                                        </span>
+                                    </div>
+                                    <span className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+                                        → {ca.recommended_action}
+                                    </span>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* Post-Decision Outcomes */}
+            {postDecisionOutcomes.length > 0 && (
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                        <TrendingDown size={14} style={{ color: '#EF4444' }} />
+                        Post-Decision Outcome Audit Trail
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        What actually happened after contaminated decisions were made
+                    </p>
+                    <div className="space-y-3">
+                        {postDecisionOutcomes.map((pdo) => {
+                            const avoidableColors: Record<string, string> = { HIGH: '#EF4444', MODERATE: '#F59E0B', LOW: '#10B981' }
+                            const ac = avoidableColors[pdo.avoidable] || '#94A3B8'
+                            return (
+                                <div key={pdo.decision_signal_id} className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div>
+                                            <p className="text-sm font-bold text-white">{pdo.event}</p>
+                                            <p className="text-xs" style={{ color: '#94A3B8' }}>Team {pdo.team} · EQS at decision: {pdo.eqs_at_decision}</p>
+                                        </div>
+                                        <span className="text-xs font-bold px-2 py-1 rounded-full"
+                                            style={{ background: `${ac}15`, color: ac }}>
+                                            {pdo.avoidable} AVOIDABLE
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-3 lg:grid-cols-6 gap-3">
+                                        {[
+                                            { label: 'Committed', value: String(pdo.committed), color: '#10B981' },
+                                            { label: 'Actual', value: String(pdo.actual), color: '#EF4444' },
+                                            { label: 'Shortfall', value: `${pdo.shortfall_pct}%`, color: '#EF4444' },
+                                            { label: 'Overtime', value: `${pdo.overtime_hrs}h ($${(pdo.overtime_cost / 1000).toFixed(1)}K)`, color: '#F59E0B' },
+                                            { label: 'Feature Delay', value: `${pdo.feature_delay_sprints} sprints`, color: '#7C3AED' },
+                                            { label: 'Total Cost', value: `$${(pdo.total_contamination_cost / 1000).toFixed(1)}K`, color: '#EF4444' },
+                                        ].map((m) => (
+                                            <div key={m.label} className="p-2 rounded-lg text-center" style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid #1E2D4A' }}>
+                                                <p className="text-sm font-black" style={{ color: m.color }}>{m.value}</p>
+                                                <p className="text-xs" style={{ color: '#94A3B8', fontSize: 9 }}>{m.label}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {pdo.sla_missed && (
+                                        <p className="text-xs mt-2 font-bold" style={{ color: '#EF4444' }}>
+                                            ⚠️ SLA missed due to contaminated decision data
+                                        </p>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Org Contamination Map */}
+            {orgContamination && (
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-bold text-white mb-1 flex items-center gap-2">
+                        <Shield size={14} style={{ color: '#7C3AED' }} />
+                        Organizational Contamination Map — {orgContamination.quarter}
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        {orgContamination.decisions_below_40}/{orgContamination.total_decisions} decisions made below EQS 40 threshold · Estimated preventable cost: <span className="font-bold" style={{ color: '#EF4444' }}>{orgContamination.estimated_preventable_cost}</span>
+                    </p>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #1E2D4A' }}>
+                                    {['Team', 'Decision', 'EQS', 'Level', 'Outcome', 'Cost'].map((h) => (
+                                        <th key={h} className="text-left pb-3 pr-4 section-title font-semibold" style={{ fontSize: 11 }}>
+                                            {h}
+                                        </th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {orgContamination.entries.map((entry, i) => {
+                                    const levelColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
+                                    const lc = levelColors[entry.eqs_level] || '#94A3B8'
+                                    return (
+                                        <tr key={i} style={{ borderBottom: '1px solid rgba(30,45,74,0.5)' }}>
+                                            <td className="py-3 pr-4 text-white font-medium">{entry.team}</td>
+                                            <td className="py-3 pr-4 text-xs text-white">{entry.decision}</td>
+                                            <td className="py-3 pr-4">
+                                                <span className="text-sm font-black" style={{ color: lc }}>{entry.eqs}</span>
+                                            </td>
+                                            <td className="py-3 pr-4">
+                                                <span className="text-xs px-2 py-0.5 rounded-full font-bold"
+                                                    style={{ background: `${lc}15`, color: lc }}>
+                                                    {entry.eqs_level.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 pr-4 text-xs" style={{ color: '#94A3B8' }}>{entry.outcome}</td>
+                                            <td className="py-3 text-xs font-bold" style={{ color: entry.cost !== 'Pending' ? '#EF4444' : '#94A3B8' }}>
+                                                {entry.cost}
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Decision Contamination Bottom Insight */}
+            <div
+                className="flex items-center gap-4 px-5 py-4 rounded-xl"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(239,68,68,0.06))',
+                    border: '1px solid rgba(124,58,237,0.18)',
+                }}
+            >
+                <div className="text-2xl">🛡️</div>
+                <div>
+                    <p className="text-sm font-semibold text-white">Decision Intelligence Governance</p>
+                    <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                        Every AI platform tells your executives what developers did. We are the only platform that tells them whether the data behind their last five AI decisions was trustworthy — and what those decisions cost when it wasn't.
+                        {contaminationSummary && (
+                            <span className="ml-1">
+                                Currently <span className="text-red-400 font-semibold">{contaminationSummary.decisions_below_eqs_40} decisions</span> were made below EQS 40 threshold, resulting in <span className="text-red-400 font-semibold">{contaminationSummary.estimated_preventable_cost}</span> in preventable costs.
+                            </span>
+                        )}
                     </p>
                 </div>
             </div>

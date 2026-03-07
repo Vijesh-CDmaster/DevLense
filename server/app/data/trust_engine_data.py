@@ -2,6 +2,10 @@ from app.models.trust_engine import (
     Suggestion, TaskTypeAccuracy, CalibrationPoint, ConfidenceMeter,
     VerifyAlert, WeeklyReport, WeeklyTrendPoint, TrustEngineDashboard,
     DeveloperTrustProfile, DevTaskTypeAccuracy,
+    TrustSignal, ExplainabilityItem, PerSuggestionTrustScore,
+    SymbolCheck, BoundaryTest, ArchProbe, SecurityFastPath,
+    VTEProtocol, VTEChecklistItem,
+    CalibrationBucket, CalibrationGap, TrustCalibrationReport,
 )
 
 SUGGESTIONS = [
@@ -272,13 +276,294 @@ DEVELOPER_PROFILES = [
 ]
 
 
-def get_full_dashboard() -> TrustEngineDashboard:
-    return TrustEngineDashboard(
-        suggestions=SUGGESTIONS,
-        task_types=TASK_TYPES,
-        calibration=CALIBRATION,
-        confidence_meters=CONFIDENCE_METERS,
-        verify_alerts=VERIFY_ALERTS,
-        weekly_report=WEEKLY_REPORT,
-        developer_profiles=DEVELOPER_PROFILES,
-    )
+def get_full_dashboard() -> dict:
+    return {
+        "suggestions": SUGGESTIONS,
+        "task_types": TASK_TYPES,
+        "calibration": CALIBRATION,
+        "confidence_meters": CONFIDENCE_METERS,
+        "verify_alerts": VERIFY_ALERTS,
+        "weekly_report": WEEKLY_REPORT,
+        "developer_profiles": DEVELOPER_PROFILES,
+        "per_suggestion_scores": PER_SUGGESTION_SCORES,
+        "vte_protocols": VTE_PROTOCOLS,
+        "calibration_report": CALIBRATION_REPORT,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════
+# 9-Signal Per-Suggestion Trust Scorer — Explainability Panels
+# ══════════════════════════════════════════════════════════════════
+
+PER_SUGGESTION_SCORES: list[PerSuggestionTrustScore] = [
+    PerSuggestionTrustScore(
+        suggestion_id="PST-001",
+        code_snippet="async function refreshAuthToken(userId: string) {\n  const token = await db.query(`SELECT * FROM tokens WHERE user_id=${userId}`);\n  if (token) return jwt.sign({ id: userId }, SECRET);\n}",
+        trust_score=31,
+        level="red",
+        recommendation="VERIFY BEFORE ACCEPTING",
+        signals=[
+            TrustSignal(signal="Task complexity index", value="High (CC=14, 4 files)", weight=0.15, score_contribution=18.5, detail="Cyclomatic complexity 14 across 4 referenced files — multi-file, high-complexity context"),
+            TrustSignal(signal="Repository context completeness", value="48% (2/4 files in context)", weight=0.15, score_contribution=16.2, detail="2 of 4 referenced symbols are outside the current context window — high hallucination risk"),
+            TrustSignal(signal="Language-specific accuracy baseline", value="TypeScript: 62% survival", weight=0.10, score_contribution=5.8, detail="TypeScript AI suggestions have 62% 14-day survival rate in this codebase"),
+            TrustSignal(signal="AI origin probability", value="94% AI-generated", weight=0.10, score_contribution=9.4, detail="Pattern classifier identifies 94% AI origin → 2.3× baseline churn probability"),
+            TrustSignal(signal="Historical accuracy for task type", value="Auth logic: 28% survival", weight=0.15, score_contribution=19.2, detail="Auth logic suggestions in this repo have only 28% 14-day survival rate"),
+            TrustSignal(signal="Security pattern presence", value="SQL injection (A03)", weight=0.15, score_contribution=22.5, detail="Unparameterized SQL query on line 2 matches OWASP A03 injection profile — mandatory verify"),
+            TrustSignal(signal="Suggestion scope delta", value="+47 lines, 2 new imports", weight=0.08, score_contribution=6.1, detail="Large scope: 47 lines introduced, 2 cross-module imports added — fragility spike"),
+            TrustSignal(signal="Time-of-day cognitive load", value="11:42 PM (non-working)", weight=0.05, score_contribution=3.8, detail="Non-working hours: acceptance rates spike during late hours when scrutiny drops"),
+            TrustSignal(signal="Codebase familiarity", value="Low (22% pattern match)", weight=0.07, score_contribution=5.5, detail="Only 22% of patterns in this suggestion match established repo conventions"),
+        ],
+        why_low=[
+            ExplainabilityItem(category="why_low", text="Multi-file scope (4 files referenced, 2 outside context) — high hallucination risk when context window is incomplete", severity="critical"),
+            ExplainabilityItem(category="why_low", text="Auth logic task type: 28% 14-day survival rate in this repo", severity="high"),
+            ExplainabilityItem(category="why_low", text="SQL query pattern: matches OWASP A03 injection profile", severity="critical"),
+            ExplainabilityItem(category="why_low", text="94% AI-origin probability → 2.3× baseline churn rate", severity="high"),
+        ],
+        what_to_check=[
+            ExplainabilityItem(category="what_to_check", text="Verify auth/token_utils.py:validate_scope() still exists — referenced but not in context", severity="high"),
+            ExplainabilityItem(category="what_to_check", text="Cross-check token expiry handling — common AI omission in auth flows", severity="high"),
+            ExplainabilityItem(category="what_to_check", text="Parameterize the SQL query before committing: use db.query('SELECT * FROM tokens WHERE user_id=$1', [userId])", severity="critical"),
+        ],
+        personal_accuracy=29.0,
+        team_accuracy=34.0,
+        task_type="Auth logic",
+        developer="Marcus Rodriguez",
+        timestamp="2026-03-06T23:42:18Z",
+    ),
+    PerSuggestionTrustScore(
+        suggestion_id="PST-002",
+        code_snippet="function validateEmail(email: string): boolean {\n  return /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/.test(email);\n}",
+        trust_score=91,
+        level="green",
+        recommendation="Safe to accept",
+        signals=[
+            TrustSignal(signal="Task complexity index", value="Low (CC=2, 1 file)", weight=0.15, score_contribution=1.2, detail="Single function, low cyclomatic complexity — minimal risk"),
+            TrustSignal(signal="Repository context completeness", value="100% (all symbols in context)", weight=0.15, score_contribution=0.0, detail="All referenced symbols exist in the current context window"),
+            TrustSignal(signal="Language-specific accuracy baseline", value="TypeScript: 62% survival", weight=0.10, score_contribution=3.8, detail="TypeScript baseline — but utility functions far exceed average"),
+            TrustSignal(signal="AI origin probability", value="78% AI-generated", weight=0.10, score_contribution=2.2, detail="Standard utility pattern — even at 78% AI origin, churn risk is low"),
+            TrustSignal(signal="Historical accuracy for task type", value="Utility: 92% survival", weight=0.15, score_contribution=1.2, detail="Utility function suggestions have 92% 14-day survival rate"),
+            TrustSignal(signal="Security pattern presence", value="None detected", weight=0.15, score_contribution=0.0, detail="No OWASP patterns detected in this suggestion"),
+            TrustSignal(signal="Suggestion scope delta", value="+3 lines, 0 imports", weight=0.08, score_contribution=0.4, detail="Minimal scope: 3 lines, no new dependencies introduced"),
+            TrustSignal(signal="Time-of-day cognitive load", value="2:15 PM (working hours)", weight=0.05, score_contribution=0.0, detail="Standard working hours — normal scrutiny context"),
+            TrustSignal(signal="Codebase familiarity", value="High (89% pattern match)", weight=0.07, score_contribution=0.8, detail="89% of patterns match established repo conventions — low hallucination risk"),
+        ],
+        why_low=[],
+        what_to_check=[
+            ExplainabilityItem(category="what_to_check", text="Regex is standard RFC 5322 approximation — consider edge cases with plus-addressing if relevant", severity="info"),
+        ],
+        personal_accuracy=94.0,
+        team_accuracy=92.0,
+        task_type="Utility function",
+        developer="Sarah Chen",
+        timestamp="2026-03-07T14:15:33Z",
+    ),
+    PerSuggestionTrustScore(
+        suggestion_id="PST-003",
+        code_snippet="class PaymentProcessor {\n  async processRefund(orderId: string, amount: number) {\n    const order = await this.orderRepo.findById(orderId);\n    await this.gateway.refund(order.transactionId, amount);\n    await this.notifyService.sendRefundEmail(order.userId);\n  }\n}",
+        trust_score=38,
+        level="red",
+        recommendation="Human review required",
+        signals=[
+            TrustSignal(signal="Task complexity index", value="Very High (CC=8, 6 files)", weight=0.15, score_contribution=15.8, detail="Cross-service orchestration touching 6 files across 3 services"),
+            TrustSignal(signal="Repository context completeness", value="33% (2/6 files in context)", weight=0.15, score_contribution=18.1, detail="Only 2 of 6 referenced files are in context — 4 external symbols unverified"),
+            TrustSignal(signal="Language-specific accuracy baseline", value="TypeScript: 62% survival", weight=0.10, score_contribution=3.8, detail="TypeScript baseline applies"),
+            TrustSignal(signal="AI origin probability", value="88% AI-generated", weight=0.10, score_contribution=8.8, detail="High AI probability on cross-service code → elevated refactor risk"),
+            TrustSignal(signal="Historical accuracy for task type", value="Architecture: 31% survival", weight=0.15, score_contribution=18.5, detail="Architecture-level suggestions have only 31% 14-day survival rate"),
+            TrustSignal(signal="Security pattern presence", value="Payment flow (PCI scope)", weight=0.15, score_contribution=12.0, detail="Payment processing pattern detected — PCI compliance requires human validation"),
+            TrustSignal(signal="Suggestion scope delta", value="+28 lines, 3 new imports", weight=0.08, score_contribution=5.4, detail="3 new cross-service imports introduced — coupling risk"),
+            TrustSignal(signal="Time-of-day cognitive load", value="5:48 PM (end of day)", weight=0.05, score_contribution=2.1, detail="End-of-day context — slightly elevated acceptance risk"),
+            TrustSignal(signal="Codebase familiarity", value="Low (34% pattern match)", weight=0.07, score_contribution=4.6, detail="Only 34% pattern match with established repo conventions"),
+        ],
+        why_low=[
+            ExplainabilityItem(category="why_low", text="Cross-service orchestration: 6 files across 3 services, only 2 in context", severity="critical"),
+            ExplainabilityItem(category="why_low", text="Architecture-level task: only 31% 14-day survival rate for this category", severity="high"),
+            ExplainabilityItem(category="why_low", text="Payment processing flow requires PCI compliance validation", severity="critical"),
+            ExplainabilityItem(category="why_low", text="4 external symbols unverified — high hallucination risk", severity="high"),
+        ],
+        what_to_check=[
+            ExplainabilityItem(category="what_to_check", text="Verify orderRepo.findById() exists and returns transactionId field", severity="high"),
+            ExplainabilityItem(category="what_to_check", text="Confirm gateway.refund() signature matches payment provider SDK", severity="critical"),
+            ExplainabilityItem(category="what_to_check", text="Check refund amount validation — no guard against negative or exceeding original", severity="critical"),
+            ExplainabilityItem(category="what_to_check", text="Verify notifyService.sendRefundEmail exists in notification service", severity="high"),
+        ],
+        personal_accuracy=22.0,
+        team_accuracy=31.0,
+        task_type="Architecture",
+        developer="Jake Morrison",
+        timestamp="2026-03-07T17:48:22Z",
+    ),
+    PerSuggestionTrustScore(
+        suggestion_id="PST-004",
+        code_snippet="const rateLimiter = rateLimit({\n  windowMs: 15 * 60 * 1000,\n  max: 100,\n  handler: (req, res) => res.status(429).json({ error: 'Too many requests' })\n});",
+        trust_score=72,
+        level="green",
+        recommendation="Safe to accept",
+        signals=[
+            TrustSignal(signal="Task complexity index", value="Medium (CC=4, 2 files)", weight=0.15, score_contribution=5.2, detail="Middleware configuration — moderate complexity, 2 files"),
+            TrustSignal(signal="Repository context completeness", value="85% (all key symbols present)", weight=0.15, score_contribution=2.3, detail="Rate limit lib and handler pattern both in context"),
+            TrustSignal(signal="Language-specific accuracy baseline", value="TypeScript: 62% survival", weight=0.10, score_contribution=3.8, detail="TypeScript baseline applies"),
+            TrustSignal(signal="AI origin probability", value="71% AI-generated", weight=0.10, score_contribution=2.9, detail="Common middleware pattern — lower churn risk despite AI origin"),
+            TrustSignal(signal="Historical accuracy for task type", value="API integration: 48% survival", weight=0.15, score_contribution=10.2, detail="API integration suggestions have moderate 48% survival rate"),
+            TrustSignal(signal="Security pattern presence", value="Rate limit (positive pattern)", weight=0.15, score_contribution=-2.0, detail="Rate limiting is a positive security pattern — trust bonus applied"),
+            TrustSignal(signal="Suggestion scope delta", value="+6 lines, 1 import", weight=0.08, score_contribution=1.6, detail="Small scope: 6 lines, 1 import — low fragility"),
+            TrustSignal(signal="Time-of-day cognitive load", value="10:22 AM (working hours)", weight=0.05, score_contribution=0.0, detail="Standard working hours"),
+            TrustSignal(signal="Codebase familiarity", value="Moderate (61% match)", weight=0.07, score_contribution=2.7, detail="61% pattern match — reasonable familiarity"),
+        ],
+        why_low=[],
+        what_to_check=[
+            ExplainabilityItem(category="what_to_check", text="Verify rate limit values match your API's documented rate limits", severity="medium"),
+            ExplainabilityItem(category="what_to_check", text="Consider adding IP-based vs user-based distinction if not already handled", severity="info"),
+        ],
+        personal_accuracy=55.0,
+        team_accuracy=48.0,
+        task_type="API integration",
+        developer="Priya Patel",
+        timestamp="2026-03-07T10:22:41Z",
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════
+# Verification Tax Eliminator (VTE) — Protocols
+# ══════════════════════════════════════════════════════════════════
+
+VTE_PROTOCOLS: list[VTEProtocol] = [
+    VTEProtocol(
+        suggestion_id="PST-001",
+        trust_score=31,
+        estimated_seconds=54,
+        symbol_checks=[
+            SymbolCheck(symbol="auth.utils.validate_token_scope()", location="referenced on line 23, not in context", status="not_in_context"),
+            SymbolCheck(symbol="payments.models.Transaction.STATUS_PENDING", location="referenced on line 31, not in context", status="not_in_context"),
+            SymbolCheck(symbol="config.RATE_LIMIT_AUTH_SECONDS", location="referenced on line 44, not in context", status="not_in_context"),
+        ],
+        boundary_tests=[
+            BoundaryTest(input_desc="token = None", target_line="tests null handling on line 19", rationale="Common AI omission: null token not handled"),
+            BoundaryTest(input_desc='token = ""', target_line="tests empty string path on line 19", rationale="Empty string bypasses many validation checks in AI-generated code"),
+            BoundaryTest(input_desc="token with expired exp claim", target_line="tests expiry logic on line 34", rationale="AI-generated JWT handling frequently omits expiry validation"),
+            BoundaryTest(input_desc="token signed with wrong key", target_line="tests signature validation on line 41", rationale="Signature verification is the most commonly hallucinated step"),
+        ],
+        arch_probes=[
+            ArchProbe(check="Does UserToken.refresh() on line 28 match the existing interface in auth/interfaces.py:TokenInterface?", target="auth/interfaces.py", risk="new_signature"),
+            ArchProbe(check="Does the new auth_session table reference on line 35 match current migration state?", target="db/migrations/0047_auth_session.py", risk="migration_mismatch"),
+            ArchProbe(check="Is the new dependency on jwt_extended (line 3) already in requirements.txt?", target="requirements.txt", risk="new_dependency"),
+        ],
+        security_fast_paths=[
+            SecurityFastPath(
+                owasp_id="A03:2021",
+                risk_label="SQL Injection",
+                lines="2",
+                current_code='db.query(`SELECT * FROM tokens WHERE user_id=${userId}`)',
+                required_fix="db.query('SELECT * FROM tokens WHERE user_id=$1', [userId])",
+                severity="critical",
+            ),
+        ],
+        sections_order=["CRITICAL", "HIGH", "MEDIUM", "MEDIUM"],
+    ),
+    VTEProtocol(
+        suggestion_id="PST-003",
+        trust_score=38,
+        estimated_seconds=62,
+        symbol_checks=[
+            SymbolCheck(symbol="this.orderRepo.findById()", location="referenced on line 3", status="not_in_context"),
+            SymbolCheck(symbol="order.transactionId", location="field access on line 4", status="not_in_context"),
+            SymbolCheck(symbol="this.gateway.refund()", location="referenced on line 4", status="not_in_context"),
+            SymbolCheck(symbol="this.notifyService.sendRefundEmail()", location="referenced on line 5", status="not_in_context"),
+        ],
+        boundary_tests=[
+            BoundaryTest(input_desc="orderId = non-existent ID", target_line="tests null order on line 3", rationale="No null check after findById — will throw on .transactionId access"),
+            BoundaryTest(input_desc="amount > order.total", target_line="tests refund exceeds original on line 4", rationale="No validation that refund amount ≤ original transaction amount"),
+            BoundaryTest(input_desc="amount = 0 or negative", target_line="tests zero/negative refund on line 4", rationale="Gateway may reject or produce undefined behavior with invalid amounts"),
+            BoundaryTest(input_desc="gateway.refund() throws", target_line="tests error handling on line 4", rationale="No try/catch — email notification will be skipped if refund fails"),
+        ],
+        arch_probes=[
+            ArchProbe(check="Does orderRepo.findById() return a transactionId field?", target="src/repos/order.repository.ts", risk="new_signature"),
+            ArchProbe(check="Does gateway.refund() signature match payment provider SDK?", target="src/services/payment-gateway.ts", risk="new_signature"),
+            ArchProbe(check="Does notifyService.sendRefundEmail() exist in notification service?", target="src/services/notification.service.ts", risk="new_dependency"),
+        ],
+        security_fast_paths=[
+            SecurityFastPath(
+                owasp_id="A04:2021",
+                risk_label="Insecure Design — missing validation",
+                lines="3-5",
+                current_code="No amount validation, no error handling, no idempotency",
+                required_fix="Add amount ≤ order.total check, wrap in try/catch, add idempotency key",
+                severity="high",
+            ),
+        ],
+        sections_order=["HIGH", "HIGH", "MEDIUM", "HIGH"],
+    ),
+    VTEProtocol(
+        suggestion_id="PST-002",
+        trust_score=91,
+        estimated_seconds=8,
+        symbol_checks=[],
+        boundary_tests=[
+            BoundaryTest(input_desc='email = ""', target_line="tests empty string", rationale="Quick sanity check"),
+            BoundaryTest(input_desc="email = 'user+tag@domain.co.uk'", target_line="tests plus-addressing", rationale="Plus-addressing support varies by business need"),
+        ],
+        arch_probes=[],
+        security_fast_paths=[],
+        sections_order=["SKIPPED", "MEDIUM", "SKIPPED", "SKIPPED"],
+    ),
+    VTEProtocol(
+        suggestion_id="PST-004",
+        trust_score=72,
+        estimated_seconds=18,
+        symbol_checks=[
+            SymbolCheck(symbol="rateLimit", location="imported on line 1", status="verified"),
+        ],
+        boundary_tests=[
+            BoundaryTest(input_desc="101st request in window", target_line="tests rate limit trigger", rationale="Verify 429 response format matches API contract"),
+            BoundaryTest(input_desc="Request after window reset", target_line="tests window expiry", rationale="Confirm counter resets properly"),
+        ],
+        arch_probes=[
+            ArchProbe(check="Is express-rate-limit already in package.json?", target="package.json", risk="new_dependency"),
+        ],
+        security_fast_paths=[],
+        sections_order=["SKIPPED", "MEDIUM", "MEDIUM", "SKIPPED"],
+    ),
+]
+
+
+# ══════════════════════════════════════════════════════════════════
+# Trust Calibration Report
+# ══════════════════════════════════════════════════════════════════
+
+CALIBRATION_REPORT = TrustCalibrationReport(
+    team="Platform Engineering",
+    week_label="Week of Mar 3",
+    suggestions_displayed=847,
+    protocols_run=312,
+    protocol_run_pct=36.8,
+    avg_verification_sec=48,
+    unstructured_avg_min=31,
+    verification_tax_saved_hrs=149.0,
+    buckets=[
+        CalibrationBucket(label="Correctly accepted", pct=61, status="green", description="High-score suggestions accepted, no issues found post-commit"),
+        CalibrationBucket(label="Correctly rejected", pct=24, status="green", description="Low-score suggestions rejected, verification confirmed issues"),
+        CalibrationBucket(label="Over-rejected", pct=11, status="amber", description="Low-score suggestions rejected, but VTE verification would have passed — waste"),
+        CalibrationBucket(label="Over-accepted", pct=4, status="red", description="High-score suggestions accepted, but issues found post-commit — risk"),
+    ],
+    team_calibration_score=73,
+    primary_gap=CalibrationGap(
+        task_type="Auth logic",
+        gap_type="over-rejection",
+        rate=18.0,
+        recommendation="Run trust calibration session for auth tasks — team is rejecting 18% of suggestions that would have passed VTE verification",
+    ),
+    secondary_gaps=[
+        CalibrationGap(
+            task_type="Database operations",
+            gap_type="over-acceptance",
+            rate=12.0,
+            recommendation="Increase verification threshold for DB operations — 12% of accepted DB suggestions caused issues",
+        ),
+        CalibrationGap(
+            task_type="API integration",
+            gap_type="over-rejection",
+            rate=9.0,
+            recommendation="API integration over-rejection at 9% — consider lowering trust threshold from 50 to 45 for this category",
+        ),
+    ],
+)

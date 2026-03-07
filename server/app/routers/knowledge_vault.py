@@ -8,17 +8,27 @@ from app.models.knowledge_vault import (
     ReasoningExtraction, OnboardingQuery, KnowledgeDecayItem,
     InterviewSession, KnowledgeTransferEntry, UndocumentedRegion,
     OnboardingInsight, DecisionChainLink,
+    ContextualExtractionSession, DecisionNode, ConstraintAlert,
+    KnowledgeDecayEntry, KnowledgeAssetValuation,
+    MortalityTimeline, DepartureExposure,
 )
 from app.data.knowledge_vault_data import (
     NODES, INTERVIEW_HISTORY, DECISIONS, RISK_SCORE,
     EXTRACTIONS, ONBOARDING_QUERIES, ARCHAEOLOGY_RESULTS,
     DECAY_ITEMS, INTERVIEW_SESSIONS, TRANSFER_MATRIX,
     UNDOCUMENTED_REGIONS, ONBOARDING_INSIGHTS, DECISION_CHAINS,
+    EXTRACTION_SESSION, DECISION_NODES, CONSTRAINT_ALERTS,
+    KNOWLEDGE_DECAY_SCORES, KNOWLEDGE_ASSET_VALUATIONS,
+    MORTALITY_TIMELINE, DEPARTURE_EXPOSURE,
     get_full_dashboard,
 )
 from app.services.knowledge_analyzer import (
     compute_risk_score, compute_bus_factor,
     compute_decay_summary, compute_transfer_velocity, compute_knowledge_gaps,
+)
+from app.services.knowledge_mortality import (
+    compute_mortality_summary, compute_departure_impact,
+    compute_constraint_coverage,
 )
 
 router = APIRouter(prefix="/api/knowledge-vault", tags=["knowledge-vault"])
@@ -119,3 +129,59 @@ async def get_knowledge_gaps():
 @router.get("/decision-chains", response_model=list[DecisionChainLink])
 async def get_decision_chains():
     return DECISION_CHAINS
+
+
+# ── Contextual Extraction Engine ──
+
+@router.get("/extraction-session")
+async def get_extraction_session():
+    return EXTRACTION_SESSION
+
+
+@router.get("/decision-nodes", response_model=list[DecisionNode])
+async def get_decision_nodes():
+    return DECISION_NODES
+
+
+@router.get("/constraint-alerts", response_model=list[ConstraintAlert])
+async def get_constraint_alerts():
+    return CONSTRAINT_ALERTS
+
+
+@router.get("/constraint-coverage")
+async def get_constraint_coverage():
+    return compute_constraint_coverage(DECISION_NODES, CONSTRAINT_ALERTS)
+
+
+# ── Knowledge Mortality Forecaster ──
+
+@router.get("/knowledge-decay-scores", response_model=list[KnowledgeDecayEntry])
+async def get_knowledge_decay_scores():
+    return KNOWLEDGE_DECAY_SCORES
+
+
+@router.get("/asset-valuations", response_model=list[KnowledgeAssetValuation])
+async def get_asset_valuations():
+    return KNOWLEDGE_ASSET_VALUATIONS
+
+
+@router.get("/mortality-timeline")
+async def get_mortality_timeline():
+    return MORTALITY_TIMELINE
+
+
+@router.get("/departure-exposure")
+async def get_departure_exposure():
+    return DEPARTURE_EXPOSURE
+
+
+@router.get("/mortality-summary")
+async def get_mortality_summary():
+    return compute_mortality_summary(
+        KNOWLEDGE_DECAY_SCORES, KNOWLEDGE_ASSET_VALUATIONS, MORTALITY_TIMELINE,
+    )
+
+
+@router.get("/departure-impact")
+async def get_departure_impact():
+    return compute_departure_impact(DEPARTURE_EXPOSURE, KNOWLEDGE_ASSET_VALUATIONS)

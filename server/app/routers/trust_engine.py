@@ -2,8 +2,10 @@ from fastapi import APIRouter
 from app.data.trust_engine_data import (
     get_full_dashboard, SUGGESTIONS, TASK_TYPES, CALIBRATION,
     CONFIDENCE_METERS, VERIFY_ALERTS, WEEKLY_REPORT, DEVELOPER_PROFILES,
+    PER_SUGGESTION_SCORES, VTE_PROTOCOLS, CALIBRATION_REPORT,
 )
 from app.services.trust_scorer import compute_trust_score, should_verify
+from app.services.vte_engine import get_vte_checklist, compute_verification_tax_summary
 
 router = APIRouter(prefix="/api/trust-engine", tags=["trust-engine"])
 
@@ -73,3 +75,28 @@ def developer_profile(dev_name: str):
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Developer not found")
     return profile
+
+
+@router.get("/per-suggestion-scores")
+def per_suggestion_scores():
+    return PER_SUGGESTION_SCORES
+
+
+@router.get("/vte-protocols")
+def vte_protocols():
+    return VTE_PROTOCOLS
+
+
+@router.get("/vte-checklist/{suggestion_id}")
+def vte_checklist(suggestion_id: str):
+    return get_vte_checklist(suggestion_id)
+
+
+@router.get("/vte-summary")
+def vte_summary():
+    return compute_verification_tax_summary()
+
+
+@router.get("/calibration-report")
+def calibration_report():
+    return CALIBRATION_REPORT

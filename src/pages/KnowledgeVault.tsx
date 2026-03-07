@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Search, MessageSquare, AlertTriangle, BookOpen, GitBranch, HelpCircle, Layers, Shield, Clock, Users, FileWarning, Link2, Calendar, TrendingDown } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
-import { knowledgeVaultApi, type KVDashboard, type KVNode, type KVInterviewMessage, type KVDecision, type KVRiskScore, type KVExtraction, type KVOnboardingQuery, type KVArchaeologyResult, type KVDecayItem, type KVInterviewSession, type KVTransferEntry, type KVUndocumentedRegion, type KVOnboardingInsight, type KVDecisionChainLink } from '../api/client'
+import { Search, MessageSquare, AlertTriangle, BookOpen, GitBranch, HelpCircle, Layers, Shield, Clock, Users, FileWarning, Link2, Calendar, TrendingDown, DollarSign, Activity, Skull, UserX, Target, Zap, FileText, CheckCircle } from 'lucide-react'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, LineChart, Line } from 'recharts'
+import { knowledgeVaultApi, type KVDashboard, type KVNode, type KVInterviewMessage, type KVDecision, type KVRiskScore, type KVExtraction, type KVOnboardingQuery, type KVArchaeologyResult, type KVDecayItem, type KVInterviewSession, type KVTransferEntry, type KVUndocumentedRegion, type KVOnboardingInsight, type KVDecisionChainLink, type KVExtractionSession, type KVDecisionNodeObj, type KVConstraintAlert, type KVKnowledgeDecayEntry, type KVAssetValuation, type KVMortalityTimeline, type KVDepartureExposure } from '../api/client'
 
 const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
 
@@ -28,7 +28,13 @@ export default function KnowledgeVault() {
     const [undocumented, setUndocumented] = useState<KVUndocumentedRegion[]>([])
     const [onboardingInsights, setOnboardingInsights] = useState<KVOnboardingInsight[]>([])
     const [decisionChains, setDecisionChains] = useState<KVDecisionChainLink[]>([])
-
+    const [extractionSession, setExtractionSession] = useState<KVExtractionSession | null>(null)
+    const [decisionNodes, setDecisionNodes] = useState<KVDecisionNodeObj[]>([])
+    const [constraintAlerts, setConstraintAlerts] = useState<KVConstraintAlert[]>([])
+    const [knowledgeDecayScores, setKnowledgeDecayScores] = useState<KVKnowledgeDecayEntry[]>([])
+    const [assetValuations, setAssetValuations] = useState<KVAssetValuation[]>([])
+    const [mortalityTimeline, setMortalityTimeline] = useState<KVMortalityTimeline | null>(null)
+    const [departureExposure, setDepartureExposure] = useState<KVDepartureExposure | null>(null)
     useEffect(() => {
         knowledgeVaultApi.dashboard().then((d) => {
             setNodes(d.nodes)
@@ -44,6 +50,13 @@ export default function KnowledgeVault() {
             setUndocumented(d.undocumented_regions)
             setOnboardingInsights(d.onboarding_insights)
             setDecisionChains(d.decision_chains)
+            setExtractionSession(d.extraction_session)
+            setDecisionNodes(d.decision_nodes)
+            setConstraintAlerts(d.constraint_alerts)
+            setKnowledgeDecayScores(d.knowledge_decay_scores)
+            setAssetValuations(d.asset_valuations)
+            setMortalityTimeline(d.mortality_timeline)
+            setDepartureExposure(d.departure_exposure)
         })
     }, [])
 
@@ -626,6 +639,394 @@ export default function KnowledgeVault() {
                             </div>
                         )
                     })}
+                </div>
+            </div>
+
+            {/* ── Contextual Knowledge Extraction Session ── */}
+            {extractionSession && (
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <MessageSquare size={14} className="inline mr-2" style={{ color: '#00D4FF' }} />
+                        Contextual Knowledge Extraction — Live Session
+                    </h3>
+                    <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>
+                        AI-guided interview analyzing {extractionSession.commits_analysed} commits before first question
+                    </p>
+                    <div className="grid grid-cols-5 gap-3 mb-4">
+                        {[
+                            { label: 'Target', value: extractionSession.target_dev, color: '#00D4FF' },
+                            { label: 'Commits Scanned', value: extractionSession.commits_analysed.toLocaleString(), color: '#7C3AED' },
+                            { label: 'Bus Factor Modules', value: extractionSession.bus_factor_modules, color: '#EF4444' },
+                            { label: 'Decisions Captured', value: extractionSession.decisions_captured, color: '#10B981' },
+                            { label: 'Constraints Captured', value: extractionSession.constraints_captured, color: '#F59E0B' },
+                        ].map((s, i) => (
+                            <div key={i} className="p-3 rounded-xl text-center" style={{ background: `${s.color}08`, border: `1px solid ${s.color}18` }}>
+                                <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>{s.label}</div>
+                                <div className="text-lg font-bold" style={{ color: s.color }}>{s.value}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="p-3 rounded-xl mb-4" style={{ background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.12)' }}>
+                        <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>Trigger File — {extractionSession.trigger_ownership_pct}% single-owner</div>
+                        <code className="text-xs" style={{ color: '#00D4FF' }}>{extractionSession.trigger_file}</code>
+                    </div>
+                    <div className="space-y-2 max-h-96 overflow-y-auto pr-2">
+                        {extractionSession.messages.map((msg, i) => (
+                            <div key={i} className={`p-3 rounded-xl ${msg.role === 'ai' ? 'ml-0 mr-12' : 'ml-12 mr-0'}`}
+                                style={{
+                                    background: msg.role === 'ai' ? 'rgba(0,212,255,0.06)' : 'rgba(124,58,237,0.06)',
+                                    border: `1px solid ${msg.role === 'ai' ? 'rgba(0,212,255,0.15)' : 'rgba(124,58,237,0.15)'}`,
+                                }}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-semibold" style={{ color: msg.role === 'ai' ? '#00D4FF' : '#A78BFA' }}>
+                                        {msg.role === 'ai' ? '🤖 DevLense AI' : `👤 ${extractionSession.target_dev}`}
+                                    </span>
+                                    {msg.decision_logged && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(16,185,129,0.15)', color: '#10B981' }}>📋 Decision Logged</span>}
+                                    {msg.constraint_logged && <span className="text-xs px-1.5 py-0.5 rounded" style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B' }}>⚠️ Constraint Logged</span>}
+                                </div>
+                                <p className="text-xs" style={{ color: '#CBD5E1', lineHeight: '1.6' }}>{msg.text}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Living Architectural Decision Nodes ── */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                    <Target size={14} className="inline mr-2" style={{ color: '#7C3AED' }} />
+                    Living Decision Nodes — Constraint-Aware Architecture
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Structured decisions permanently linked to code regions — with hard/soft constraint enforcement
+                </p>
+                <div className="space-y-3">
+                    {decisionNodes.map((node) => {
+                        const cColor = node.constraint_type === 'hard' ? '#EF4444' : node.constraint_type === 'soft' ? '#F59E0B' : '#94A3B8'
+                        const statusColor = node.status === 'active' ? '#10B981' : node.status === 'superseded' ? '#94A3B8' : '#F59E0B'
+                        return (
+                            <div key={node.id} className="p-4 rounded-xl" style={{ background: `${cColor}05`, border: `1px solid ${cColor}15` }}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: `${cColor}15`, color: cColor }}>
+                                        {node.constraint_type === 'hard' ? '🔒 HARD' : node.constraint_type === 'soft' ? '🔓 SOFT' : '—'} CONSTRAINT
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 rounded" style={{ background: `${statusColor}15`, color: statusColor }}>{node.status}</span>
+                                    <span className="ml-auto text-xs" style={{ color: '#64748B' }}>{node.captured_date} · {node.source_type}</span>
+                                </div>
+                                <h4 className="text-sm font-semibold text-white mb-1">{node.decision}</h4>
+                                <p className="text-xs mb-2" style={{ color: '#CBD5E1', lineHeight: 1.5 }}>{node.context}</p>
+                                {node.constraint_detail && (
+                                    <div className="p-2 rounded-lg mb-2" style={{ background: `${cColor}08`, border: `1px solid ${cColor}12` }}>
+                                        <span className="text-xs font-medium" style={{ color: cColor }}>⚡ {node.constraint_detail}</span>
+                                        {node.constraint_re_eval_trigger && (
+                                            <span className="text-xs ml-3" style={{ color: '#94A3B8' }}>Re-evaluate: {node.constraint_re_eval_trigger}</span>
+                                        )}
+                                    </div>
+                                )}
+                                <div className="flex flex-wrap gap-2 mb-2">
+                                    {node.alternatives_rejected.map((alt, j) => (
+                                        <div key={j} className="text-xs px-2 py-1 rounded" style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.12)' }}>
+                                            <span style={{ color: '#EF4444' }}>✗ {alt.name}</span>
+                                            <span className="ml-1" style={{ color: '#94A3B8' }}>— {alt.reason}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div className="flex gap-2">
+                                    {node.code_regions.map((r, j) => (
+                                        <code key={j} className="text-xs px-2 py-0.5 rounded" style={{ background: 'rgba(0,212,255,0.08)', color: '#00D4FF' }}>
+                                            {r.file} L{r.lines}
+                                        </code>
+                                    ))}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* ── Constraint Alert Panel ── */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                    <Zap size={14} className="inline mr-2" style={{ color: '#EF4444' }} />
+                    Constraint Alert Panel — PR Guard Rails
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Auto-fires when PRs modify code governed by undocumented constraints
+                </p>
+                <div className="space-y-2">
+                    {constraintAlerts.map((alert) => {
+                        const sevColor = alert.severity === 'critical' ? '#EF4444' : '#F59E0B'
+                        const resColor = alert.resolution === 'pending' ? '#EF4444' : alert.resolution === 'acknowledged' ? '#10B981' : '#94A3B8'
+                        return (
+                            <div key={alert.id} className="p-4 rounded-xl" style={{ background: `${sevColor}05`, border: `1px solid ${sevColor}15` }}>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: `${sevColor}20`, color: sevColor }}>
+                                        {alert.severity === 'critical' ? '🚨' : '⚠️'} {alert.severity.toUpperCase()}
+                                    </span>
+                                    <span className="text-xs font-medium" style={{ color: '#00D4FF' }}>PR #{alert.pr_number}</span>
+                                    <span className="text-xs" style={{ color: '#A78BFA' }}>{alert.pr_author}</span>
+                                    <span className="ml-auto text-xs px-2 py-0.5 rounded" style={{ background: `${resColor}15`, color: resColor }}>{alert.resolution}</span>
+                                </div>
+                                <p className="text-xs mb-1" style={{ color: '#CBD5E1' }}>
+                                    Modified <code style={{ color: '#00D4FF' }}>{alert.file_modified}</code> lines {alert.lines_modified}
+                                </p>
+                                <p className="text-xs" style={{ color: sevColor }}>
+                                    ⚡ Constraint: {alert.constraint_violated}
+                                </p>
+                                <div className="flex items-center gap-3 mt-2">
+                                    {alert.auto_comment_posted && (
+                                        <span className="text-xs" style={{ color: '#10B981' }}>✓ Auto-comment posted to PR</span>
+                                    )}
+                                    <span className="text-xs ml-auto" style={{ color: '#64748B' }}>{alert.date}</span>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* ── Knowledge Decay Score (KDS) Curves ── */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                    <TrendingDown size={14} className="inline mr-2" style={{ color: '#F59E0B' }} />
+                    Knowledge Decay Score (KDS) — Decay Curves by Code Region
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    100 = fully retained knowledge → 0 = completely unrecoverable. Below 30 = critical threshold.
+                </p>
+                <div style={{ height: 260 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={knowledgeDecayScores.map(e => ({
+                            name: e.code_region.split('/').pop()?.split('.')[0] ?? e.code_region,
+                            'At Decision': e.kds_at_decision,
+                            '6mo': e.kds_6mo,
+                            '12mo': e.kds_12mo,
+                            '18mo': e.kds_18mo,
+                            'Current': e.kds_current,
+                            'Proj 36mo': e.kds_projected_36mo,
+                        }))}>
+                            <XAxis dataKey="name" tick={{ fill: '#94A3B8', fontSize: 10 }} />
+                            <YAxis domain={[0, 100]} tick={{ fill: '#94A3B8', fontSize: 10 }} />
+                            <Tooltip {...chartTooltipStyle} />
+                            <Line type="monotone" dataKey="At Decision" stroke="#10B981" strokeWidth={2} dot={{ r: 3 }} />
+                            <Line type="monotone" dataKey="Current" stroke="#F59E0B" strokeWidth={2} dot={{ r: 3 }} />
+                            <Line type="monotone" dataKey="Proj 36mo" stroke="#EF4444" strokeWidth={2} dot={{ r: 3 }} strokeDasharray="5 5" />
+                        </LineChart>
+                    </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-1 gap-2 mt-4">
+                    {knowledgeDecayScores.map((entry, i) => {
+                        const kdsColor = entry.kds_current >= 70 ? '#10B981' : entry.kds_current >= 30 ? '#F59E0B' : '#EF4444'
+                        return (
+                            <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: `${kdsColor}05`, border: `1px solid ${kdsColor}12` }}>
+                                <div className="flex-1">
+                                    <code className="text-xs" style={{ color: '#00D4FF' }}>{entry.code_region}</code>
+                                    <span className="text-xs ml-2" style={{ color: '#94A3B8' }}>Holder: {entry.primary_holder} ({entry.ownership_pct}%)</span>
+                                </div>
+                                <div className="text-center" style={{ minWidth: 60 }}>
+                                    <div className="text-lg font-bold" style={{ color: kdsColor }}>{entry.kds_current}</div>
+                                    <div className="text-xs" style={{ color: '#64748B' }}>KDS</div>
+                                </div>
+                                <div className="text-center" style={{ minWidth: 80 }}>
+                                    <div className="text-xs" style={{ color: entry.months_to_critical <= 3 ? '#EF4444' : '#F59E0B' }}>
+                                        {entry.months_to_critical > 0 ? `${entry.months_to_critical}mo to critical` : 'SAFE'}
+                                    </div>
+                                    <div className="text-xs" style={{ color: '#64748B' }}>{entry.critical_threshold_date}</div>
+                                </div>
+                                <div className="w-24 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                                    <div className="h-full rounded-full" style={{ width: `${entry.kds_current}%`, background: kdsColor }} />
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            {/* ── Knowledge Asset Valuation (KAV) ── */}
+            <div className="glass-card p-5">
+                <h3 className="text-sm font-semibold text-white mb-1">
+                    <DollarSign size={14} className="inline mr-2" style={{ color: '#10B981' }} />
+                    Knowledge Asset Valuation (KAV) — Financial Impact
+                </h3>
+                <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                    Architectural knowledge modeled as a depreciating financial asset — reconstruction + incident + SLA cost
+                </p>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                                {['Module', 'Total KAV', 'KDS', 'Recoverable', 'Irrecoverable', 'Extract Cost', 'ROI'].map(h => (
+                                    <th key={h} className="py-2 px-3 text-left font-medium" style={{ color: '#94A3B8' }}>{h}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {assetValuations.map((av, i) => {
+                                const kdsColor = av.current_kds >= 70 ? '#10B981' : av.current_kds >= 30 ? '#F59E0B' : '#EF4444'
+                                return (
+                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                        <td className="py-2 px-3 font-medium text-white">{av.module_label}</td>
+                                        <td className="py-2 px-3 font-bold" style={{ color: '#00D4FF' }}>${av.total_kav.toLocaleString()}</td>
+                                        <td className="py-2 px-3">
+                                            <span className="px-1.5 py-0.5 rounded font-bold" style={{ background: `${kdsColor}15`, color: kdsColor }}>{av.current_kds}</span>
+                                        </td>
+                                        <td className="py-2 px-3" style={{ color: '#10B981' }}>${av.recoverable_value.toLocaleString()}</td>
+                                        <td className="py-2 px-3" style={{ color: '#EF4444' }}>${av.already_irrecoverable.toLocaleString()}</td>
+                                        <td className="py-2 px-3" style={{ color: '#94A3B8' }}>${av.extraction_cost.toLocaleString()}</td>
+                                        <td className="py-2 px-3 font-bold" style={{ color: '#7C3AED' }}>{av.extraction_roi}x</td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mt-4">
+                    {[
+                        { label: 'Total Knowledge Assets', value: `$${assetValuations.reduce((s, a) => s + a.total_kav, 0).toLocaleString()}`, color: '#00D4FF' },
+                        { label: 'Total Recoverable', value: `$${assetValuations.reduce((s, a) => s + a.recoverable_value, 0).toLocaleString()}`, color: '#10B981' },
+                        { label: 'Avg Extraction ROI', value: `${Math.round(assetValuations.reduce((s, a) => s + a.extraction_roi, 0) / (assetValuations.length || 1))}x`, color: '#7C3AED' },
+                    ].map((s, i) => (
+                        <div key={i} className="p-3 rounded-xl text-center" style={{ background: `${s.color}08`, border: `1px solid ${s.color}18` }}>
+                            <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>{s.label}</div>
+                            <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ── Knowledge Mortality Timeline ── */}
+            {mortalityTimeline && (
+                <div className="glass-card p-5">
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <Skull size={14} className="inline mr-2" style={{ color: '#EF4444' }} />
+                        Knowledge Mortality Timeline — {mortalityTimeline.quarter} {mortalityTimeline.org}
+                    </h3>
+                    <p className="text-xs mb-3" style={{ color: '#94A3B8' }}>
+                        Prioritized extraction queue — knowledge that expires this quarter without intervention
+                    </p>
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                        {[
+                            { label: 'At Imminent Risk', value: `$${mortalityTimeline.total_at_imminent_risk.toLocaleString()}`, color: '#EF4444' },
+                            { label: 'Sessions Needed', value: mortalityTimeline.recommended_sessions, color: '#F59E0B' },
+                            { label: 'Extraction Cost', value: `$${mortalityTimeline.extraction_cost.toLocaleString()}`, color: '#94A3B8' },
+                            { label: 'Preservation ROI', value: `${mortalityTimeline.preservation_roi}x`, color: '#10B981' },
+                        ].map((s, i) => (
+                            <div key={i} className="p-3 rounded-xl text-center" style={{ background: `${s.color}08`, border: `1px solid ${s.color}18` }}>
+                                <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>{s.label}</div>
+                                <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="space-y-2">
+                        {mortalityTimeline.entries.map((entry, i) => {
+                            const prioColor = entry.priority === 'urgent' ? '#EF4444' : entry.priority === 'high' ? '#F59E0B' : '#10B981'
+                            return (
+                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: `${prioColor}05`, border: `1px solid ${prioColor}12` }}>
+                                    <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: `${prioColor}20`, color: prioColor }}>
+                                        {entry.priority.toUpperCase()}
+                                    </span>
+                                    <div className="flex-1">
+                                        <span className="text-sm text-white font-medium">{entry.module_label}</span>
+                                        <span className="text-xs ml-2" style={{ color: '#94A3B8' }}>{entry.holder}</span>
+                                    </div>
+                                    <div className="text-center" style={{ minWidth: 50 }}>
+                                        <div className="text-sm font-bold" style={{ color: entry.kds < 30 ? '#EF4444' : '#F59E0B' }}>{entry.kds}</div>
+                                        <div className="text-xs" style={{ color: '#64748B' }}>KDS</div>
+                                    </div>
+                                    <div className="text-center" style={{ minWidth: 70 }}>
+                                        <div className="text-sm font-bold" style={{ color: '#00D4FF' }}>${entry.kav.toLocaleString()}</div>
+                                        <div className="text-xs" style={{ color: '#64748B' }}>KAV</div>
+                                    </div>
+                                    <div className="text-xs" style={{ color: '#94A3B8' }}>{entry.expiry_date}</div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* ── Departure Exposure Amplifier ── */}
+            {departureExposure && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(239,68,68,0.25)', background: 'linear-gradient(135deg, rgba(239,68,68,0.04) 0%, rgba(124,58,237,0.04) 100%)' }}>
+                    <h3 className="text-sm font-semibold text-white mb-1">
+                        <UserX size={14} className="inline mr-2" style={{ color: '#EF4444' }} />
+                        Departure Exposure Amplifier — Active Alert
+                    </h3>
+                    <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                        Signal detected → automatic knowledge risk assessment with financial impact
+                    </p>
+                    <div className="p-4 rounded-xl mb-4" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                        <div className="flex items-center gap-4">
+                            <div>
+                                <div className="text-sm font-bold" style={{ color: '#EF4444' }}>🚨 {departureExposure.dev}</div>
+                                <div className="text-xs mt-1" style={{ color: '#F59E0B' }}>
+                                    Signal: {departureExposure.signal} · {departureExposure.signal_date}
+                                </div>
+                            </div>
+                            <div className="ml-auto text-right">
+                                <div className="text-2xl font-black" style={{ color: '#EF4444' }}>
+                                    {departureExposure.action_window_days}-Day Window
+                                </div>
+                                <div className="text-xs" style={{ color: '#94A3B8' }}>First critical: {departureExposure.first_critical_expiry}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3 mb-4">
+                        {[
+                            { label: 'Combined KAV', value: `$${departureExposure.combined_kav.toLocaleString()}`, color: '#EF4444' },
+                            { label: 'Recoverable', value: `$${departureExposure.recoverable_with_extraction.toLocaleString()}`, color: '#10B981' },
+                            { label: 'Irrecoverable', value: `$${departureExposure.irrecoverable_immediately.toLocaleString()}`, color: '#94A3B8' },
+                            { label: 'Preservation ROI', value: `${departureExposure.preservation_roi}x`, color: '#7C3AED' },
+                        ].map((s, i) => (
+                            <div key={i} className="p-3 rounded-xl text-center" style={{ background: `${s.color}08`, border: `1px solid ${s.color}18` }}>
+                                <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>{s.label}</div>
+                                <div className="text-xl font-bold" style={{ color: s.color }}>{s.value}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="p-3 rounded-xl" style={{ background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.12)' }}>
+                            <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>Modules Affected</div>
+                            <div className="text-lg font-bold" style={{ color: '#00D4FF' }}>{departureExposure.modules_affected}</div>
+                        </div>
+                        <div className="p-3 rounded-xl" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.12)' }}>
+                            <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>Sessions to Extract</div>
+                            <div className="text-lg font-bold" style={{ color: '#F59E0B' }}>{departureExposure.extraction_sessions} sessions · {departureExposure.extraction_hours}h</div>
+                        </div>
+                        <div className="p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.12)' }}>
+                            <div className="text-xs mb-1" style={{ color: '#94A3B8' }}>Already Documented</div>
+                            <div className="text-lg font-bold" style={{ color: '#10B981' }}>${departureExposure.already_documented.toLocaleString()}</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Enterprise Knowledge Intelligence ── */}
+            <div className="glass-card p-5" style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.06) 0%, rgba(0,212,255,0.06) 50%, rgba(16,185,129,0.06) 100%)', border: '1px solid rgba(124,58,237,0.2)' }}>
+                <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: 'rgba(124,58,237,0.15)' }}>
+                        <BookOpen size={18} style={{ color: '#A78BFA' }} />
+                    </div>
+                    <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-white">
+                            Enterprise Knowledge Intelligence — The Knowledge Mortality Platform
+                        </h3>
+                        <p className="text-xs mt-0.5" style={{ color: '#CBD5E1' }}>
+                            Every documentation tool captures <em>what</em> your code does. DevLense extracts <strong>why</strong> it was built that way — directly from the developers who made the decisions — before that reasoning decays below the point of recovery.
+                        </p>
+                    </div>
+                    <div className="flex gap-4">
+                        {[
+                            { label: 'Decisions Captured', value: decisionNodes.length, color: '#7C3AED' },
+                            { label: 'Constraint Alerts', value: constraintAlerts.length, color: '#EF4444' },
+                            { label: 'Knowledge Assets', value: `$${assetValuations.reduce((s, a) => s + a.total_kav, 0).toLocaleString()}`, color: '#00D4FF' },
+                        ].map((s, i) => (
+                            <div key={i} className="text-center">
+                                <div className="text-lg font-bold" style={{ color: s.color }}>{s.value}</div>
+                                <div className="text-xs" style={{ color: '#94A3B8' }}>{s.label}</div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </div>

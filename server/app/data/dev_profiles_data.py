@@ -2,6 +2,9 @@ from app.models.dev_profiles import (
     Developer, BenefitCurvePoint, ImpactTimelinePoint, BenefitHarm,
     ProductivityTimeline, ProductivityTimelinePoint, ReverseAlert,
     TrustScore, DevProfilesDashboard,
+    SenioritySignal, SeniorityProfile, TaskTypeImpact, AIImpactDashboard,
+    JDIWeek, JuniorDependencyIndex, SeniorityVelocityDeficit,
+    TeamPipelineRisk, InterventionOption, OrgPipelineDebtReport,
 )
 
 DEVELOPERS = [
@@ -135,16 +138,369 @@ TRUST_SCORES = [
 ]
 
 
-def get_full_dashboard() -> DevProfilesDashboard:
-    return DevProfilesDashboard(
-        developers=DEVELOPERS,
-        benefit_curve=BENEFIT_CURVE,
-        impact_timeline=IMPACT_TIMELINE,
-        benefit_harm=BENEFIT_HARM,
-        productivity_timelines=PRODUCTIVITY_TIMELINES,
-        reverse_alerts=REVERSE_ALERTS,
-        trust_scores=TRUST_SCORES,
-    )
+# ── Seniority Profiler — 7-Signal Behavioral Classifier ──
+
+SENIORITY_PROFILES = [
+    SeniorityProfile(
+        developer="Raj Kumar", seniority_score=84, band="Expert", years_active=14,
+        top_signal="Cross-module edit radius",
+        signals=[
+            SenioritySignal(signal="Commit graph depth", measurement="14 yrs active across 23 repos", raw_value=14, score_contribution=18),
+            SenioritySignal(signal="Cyclomatic complexity delta", measurement="Avg CC authored: 12.4 vs modified: 8.1", raw_value=12.4, score_contribution=14),
+            SenioritySignal(signal="Cross-module edit radius", measurement="8.2 distinct modules per PR", raw_value=8.2, score_contribution=16),
+            SenioritySignal(signal="Review-to-author ratio", measurement="3.4 reviews per authored PR", raw_value=3.4, score_contribution=13),
+            SenioritySignal(signal="Infrastructure file ownership", measurement="34% infra commits", raw_value=34, score_contribution=11),
+            SenioritySignal(signal="PR comment technical density", measurement="Avg 142 words, 68% technical vocabulary", raw_value=142, score_contribution=7),
+            SenioritySignal(signal="Revert survival rate", measurement="96.2% commits survive 30+ days", raw_value=96.2, score_contribution=5),
+        ],
+    ),
+    SeniorityProfile(
+        developer="Priya S.", seniority_score=68, band="Proficient", years_active=9,
+        top_signal="Review-to-author ratio",
+        signals=[
+            SenioritySignal(signal="Commit graph depth", measurement="9 yrs active across 11 repos", raw_value=9, score_contribution=12),
+            SenioritySignal(signal="Cyclomatic complexity delta", measurement="Avg CC authored: 8.7 vs modified: 6.3", raw_value=8.7, score_contribution=11),
+            SenioritySignal(signal="Cross-module edit radius", measurement="5.1 distinct modules per PR", raw_value=5.1, score_contribution=10),
+            SenioritySignal(signal="Review-to-author ratio", measurement="2.8 reviews per authored PR", raw_value=2.8, score_contribution=14),
+            SenioritySignal(signal="Infrastructure file ownership", measurement="22% infra commits", raw_value=22, score_contribution=9),
+            SenioritySignal(signal="PR comment technical density", measurement="Avg 98 words, 54% technical vocabulary", raw_value=98, score_contribution=7),
+            SenioritySignal(signal="Revert survival rate", measurement="93.8% commits survive 30+ days", raw_value=93.8, score_contribution=5),
+        ],
+    ),
+    SeniorityProfile(
+        developer="Arjun M.", seniority_score=42, band="Developing", years_active=4,
+        top_signal="Commit graph depth",
+        signals=[
+            SenioritySignal(signal="Commit graph depth", measurement="4 yrs active across 5 repos", raw_value=4, score_contribution=8),
+            SenioritySignal(signal="Cyclomatic complexity delta", measurement="Avg CC authored: 5.2 vs modified: 4.8", raw_value=5.2, score_contribution=7),
+            SenioritySignal(signal="Cross-module edit radius", measurement="2.3 distinct modules per PR", raw_value=2.3, score_contribution=6),
+            SenioritySignal(signal="Review-to-author ratio", measurement="0.8 reviews per authored PR", raw_value=0.8, score_contribution=6),
+            SenioritySignal(signal="Infrastructure file ownership", measurement="8% infra commits", raw_value=8, score_contribution=5),
+            SenioritySignal(signal="PR comment technical density", measurement="Avg 42 words, 31% technical vocabulary", raw_value=42, score_contribution=5),
+            SenioritySignal(signal="Revert survival rate", measurement="87.1% commits survive 30+ days", raw_value=87.1, score_contribution=5),
+        ],
+    ),
+    SeniorityProfile(
+        developer="Meena R.", seniority_score=18, band="Emerging", years_active=1,
+        top_signal="Revert survival rate",
+        signals=[
+            SenioritySignal(signal="Commit graph depth", measurement="1 yr active across 2 repos", raw_value=1, score_contribution=3),
+            SenioritySignal(signal="Cyclomatic complexity delta", measurement="Avg CC authored: 2.8 vs modified: 3.1", raw_value=2.8, score_contribution=2),
+            SenioritySignal(signal="Cross-module edit radius", measurement="1.1 distinct modules per PR", raw_value=1.1, score_contribution=2),
+            SenioritySignal(signal="Review-to-author ratio", measurement="0.1 reviews per authored PR", raw_value=0.1, score_contribution=2),
+            SenioritySignal(signal="Infrastructure file ownership", measurement="2% infra commits", raw_value=2, score_contribution=2),
+            SenioritySignal(signal="PR comment technical density", measurement="Avg 18 words, 12% technical vocabulary", raw_value=18, score_contribution=3),
+            SenioritySignal(signal="Revert survival rate", measurement="78.4% commits survive 30+ days", raw_value=78.4, score_contribution=4),
+        ],
+    ),
+    SeniorityProfile(
+        developer="Dev K.", seniority_score=92, band="Expert", years_active=18,
+        top_signal="Infrastructure file ownership",
+        signals=[
+            SenioritySignal(signal="Commit graph depth", measurement="18 yrs active across 41 repos", raw_value=18, score_contribution=20),
+            SenioritySignal(signal="Cyclomatic complexity delta", measurement="Avg CC authored: 16.1 vs modified: 9.4", raw_value=16.1, score_contribution=16),
+            SenioritySignal(signal="Cross-module edit radius", measurement="11.4 distinct modules per PR", raw_value=11.4, score_contribution=14),
+            SenioritySignal(signal="Review-to-author ratio", measurement="5.1 reviews per authored PR", raw_value=5.1, score_contribution=12),
+            SenioritySignal(signal="Infrastructure file ownership", measurement="52% infra commits", raw_value=52, score_contribution=14),
+            SenioritySignal(signal="PR comment technical density", measurement="Avg 218 words, 74% technical vocabulary", raw_value=218, score_contribution=9),
+            SenioritySignal(signal="Revert survival rate", measurement="98.1% commits survive 30+ days", raw_value=98.1, score_contribution=7),
+        ],
+    ),
+]
+
+
+# ── AI Impact Dashboard — Per-Task-Type Benefit/Harm ──
+
+AI_IMPACT_DASHBOARDS = [
+    AIImpactDashboard(
+        developer="Raj Kumar", seniority_score=84, band="Expert",
+        net_impact_hrs=-12.4,
+        recommended_disable=["Architecture work", "Known codebase bugs"],
+        benefit_zone=["Greenfield features", "Large refactors"],
+        task_impacts=[
+            TaskTypeImpact(task_type="Architecture work", ai_on_avg_hrs=4.2, ai_off_avg_hrs=2.8, delta_pct=50, signal="HARM"),
+            TaskTypeImpact(task_type="Large refactor", ai_on_avg_hrs=3.1, ai_off_avg_hrs=3.4, delta_pct=-9, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Known codebase bug", ai_on_avg_hrs=1.8, ai_off_avg_hrs=1.1, delta_pct=64, signal="HARM"),
+            TaskTypeImpact(task_type="Greenfield feature", ai_on_avg_hrs=2.6, ai_off_avg_hrs=2.9, delta_pct=-10, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Code review", ai_on_avg_hrs=0.9, ai_off_avg_hrs=0.7, delta_pct=29, signal="MARGINAL"),
+        ],
+    ),
+    AIImpactDashboard(
+        developer="Priya S.", seniority_score=68, band="Proficient",
+        net_impact_hrs=-3.8,
+        recommended_disable=["Known codebase bugs"],
+        benefit_zone=["Greenfield features", "Boilerplate tasks", "Large refactors"],
+        task_impacts=[
+            TaskTypeImpact(task_type="Architecture work", ai_on_avg_hrs=3.5, ai_off_avg_hrs=3.1, delta_pct=13, signal="MARGINAL"),
+            TaskTypeImpact(task_type="Large refactor", ai_on_avg_hrs=2.8, ai_off_avg_hrs=3.2, delta_pct=-13, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Known codebase bug", ai_on_avg_hrs=1.6, ai_off_avg_hrs=1.0, delta_pct=60, signal="HARM"),
+            TaskTypeImpact(task_type="Greenfield feature", ai_on_avg_hrs=2.1, ai_off_avg_hrs=2.8, delta_pct=-25, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Boilerplate task", ai_on_avg_hrs=0.4, ai_off_avg_hrs=0.9, delta_pct=-56, signal="BENEFIT"),
+        ],
+    ),
+    AIImpactDashboard(
+        developer="Arjun M.", seniority_score=42, band="Developing",
+        net_impact_hrs=6.2,
+        recommended_disable=[],
+        benefit_zone=["Greenfield features", "Boilerplate tasks", "Large refactors", "Code review"],
+        task_impacts=[
+            TaskTypeImpact(task_type="Architecture work", ai_on_avg_hrs=5.1, ai_off_avg_hrs=4.8, delta_pct=6, signal="MARGINAL"),
+            TaskTypeImpact(task_type="Large refactor", ai_on_avg_hrs=3.4, ai_off_avg_hrs=4.1, delta_pct=-17, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Known codebase bug", ai_on_avg_hrs=2.2, ai_off_avg_hrs=2.4, delta_pct=-8, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Greenfield feature", ai_on_avg_hrs=1.8, ai_off_avg_hrs=3.2, delta_pct=-44, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Boilerplate task", ai_on_avg_hrs=0.3, ai_off_avg_hrs=1.1, delta_pct=-73, signal="BENEFIT"),
+        ],
+    ),
+    AIImpactDashboard(
+        developer="Meena R.", seniority_score=18, band="Emerging",
+        net_impact_hrs=14.8,
+        recommended_disable=[],
+        benefit_zone=["Greenfield features", "Boilerplate tasks", "Known codebase bugs", "Code review"],
+        task_impacts=[
+            TaskTypeImpact(task_type="Architecture work", ai_on_avg_hrs=6.8, ai_off_avg_hrs=7.2, delta_pct=-6, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Large refactor", ai_on_avg_hrs=4.1, ai_off_avg_hrs=5.8, delta_pct=-29, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Known codebase bug", ai_on_avg_hrs=2.4, ai_off_avg_hrs=3.9, delta_pct=-38, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Greenfield feature", ai_on_avg_hrs=1.4, ai_off_avg_hrs=3.5, delta_pct=-60, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Boilerplate task", ai_on_avg_hrs=0.2, ai_off_avg_hrs=1.4, delta_pct=-86, signal="BENEFIT"),
+        ],
+    ),
+    AIImpactDashboard(
+        developer="Dev K.", seniority_score=92, band="Expert",
+        net_impact_hrs=-18.6,
+        recommended_disable=["Architecture work", "Known codebase bugs", "Code review"],
+        benefit_zone=["Greenfield features"],
+        task_impacts=[
+            TaskTypeImpact(task_type="Architecture work", ai_on_avg_hrs=5.6, ai_off_avg_hrs=2.4, delta_pct=133, signal="HARM"),
+            TaskTypeImpact(task_type="Large refactor", ai_on_avg_hrs=3.8, ai_off_avg_hrs=3.2, delta_pct=19, signal="MARGINAL"),
+            TaskTypeImpact(task_type="Known codebase bug", ai_on_avg_hrs=2.1, ai_off_avg_hrs=0.8, delta_pct=163, signal="HARM"),
+            TaskTypeImpact(task_type="Greenfield feature", ai_on_avg_hrs=2.2, ai_off_avg_hrs=2.6, delta_pct=-15, signal="BENEFIT"),
+            TaskTypeImpact(task_type="Code review", ai_on_avg_hrs=1.2, ai_off_avg_hrs=0.5, delta_pct=140, signal="HARM"),
+        ],
+    ),
+]
+
+
+# ── Talent Pipeline Debt Forecaster ──
+
+JUNIOR_DEPENDENCY_INDICES = [
+    JuniorDependencyIndex(
+        developer="Meena R.", band="Emerging", seniority_score=18,
+        jdi_trend_pts=-41, atrophy_velocity=-2.6, projected_jdi_week28=5,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=82),
+            JDIWeek(week_range="Week 5-8", independent_pct=67),
+            JDIWeek(week_range="Week 9-12", independent_pct=54),
+            JDIWeek(week_range="Week 13-16", independent_pct=41),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Arjun M.", band="Developing", seniority_score=42,
+        jdi_trend_pts=-22, atrophy_velocity=-1.4, projected_jdi_week28=24,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=74),
+            JDIWeek(week_range="Week 5-8", independent_pct=66),
+            JDIWeek(week_range="Week 9-12", independent_pct=58),
+            JDIWeek(week_range="Week 13-16", independent_pct=52),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Sana T.", band="Emerging", seniority_score=12,
+        jdi_trend_pts=-52, atrophy_velocity=-3.3, projected_jdi_week28=2,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=78),
+            JDIWeek(week_range="Week 5-8", independent_pct=58),
+            JDIWeek(week_range="Week 9-12", independent_pct=38),
+            JDIWeek(week_range="Week 13-16", independent_pct=26),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Vikram P.", band="Developing", seniority_score=31,
+        jdi_trend_pts=-18, atrophy_velocity=-1.1, projected_jdi_week28=32,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=70),
+            JDIWeek(week_range="Week 5-8", independent_pct=64),
+            JDIWeek(week_range="Week 9-12", independent_pct=58),
+            JDIWeek(week_range="Week 13-16", independent_pct=52),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Anita D.", band="Emerging", seniority_score=15,
+        jdi_trend_pts=-46, atrophy_velocity=-2.9, projected_jdi_week28=4,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=80),
+            JDIWeek(week_range="Week 5-8", independent_pct=62),
+            JDIWeek(week_range="Week 9-12", independent_pct=46),
+            JDIWeek(week_range="Week 13-16", independent_pct=34),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Rohit S.", band="Developing", seniority_score=36,
+        jdi_trend_pts=-12, atrophy_velocity=-0.8, projected_jdi_week28=42,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=72),
+            JDIWeek(week_range="Week 5-8", independent_pct=68),
+            JDIWeek(week_range="Week 9-12", independent_pct=64),
+            JDIWeek(week_range="Week 13-16", independent_pct=60),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Neha K.", band="Emerging", seniority_score=10,
+        jdi_trend_pts=-56, atrophy_velocity=-3.5, projected_jdi_week28=1,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=76),
+            JDIWeek(week_range="Week 5-8", independent_pct=52),
+            JDIWeek(week_range="Week 9-12", independent_pct=32),
+            JDIWeek(week_range="Week 13-16", independent_pct=20),
+        ],
+    ),
+    JuniorDependencyIndex(
+        developer="Karthik V.", band="Developing", seniority_score=28,
+        jdi_trend_pts=-30, atrophy_velocity=-1.9, projected_jdi_week28=16,
+        weekly_jdi=[
+            JDIWeek(week_range="Week 1-4", independent_pct=75),
+            JDIWeek(week_range="Week 5-8", independent_pct=62),
+            JDIWeek(week_range="Week 9-12", independent_pct=52),
+            JDIWeek(week_range="Week 13-16", independent_pct=45),
+        ],
+    ),
+]
+
+
+SENIORITY_VELOCITY_DEFICITS = [
+    SeniorityVelocityDeficit(
+        developer="Meena R.", tenure_months=14,
+        expected_score_growth=38, actual_score_growth=12, gap_pct=68,
+        expected_complexity_growth=2.1, actual_complexity_growth=0.6, complexity_gap_pct=71,
+        expected_review_pct=40, actual_review_pct=8, review_gap_pct=80,
+        svr=0.32, projected_proficient_month=54, expected_proficient_month=28, timeline_cost_months=26,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Arjun M.", tenure_months=19,
+        expected_score_growth=38, actual_score_growth=21, gap_pct=45,
+        expected_complexity_growth=2.1, actual_complexity_growth=0.9, complexity_gap_pct=57,
+        expected_review_pct=60, actual_review_pct=22, review_gap_pct=63,
+        svr=0.41, projected_proficient_month=48, expected_proficient_month=28, timeline_cost_months=20,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Sana T.", tenure_months=8,
+        expected_score_growth=38, actual_score_growth=8, gap_pct=79,
+        expected_complexity_growth=2.1, actual_complexity_growth=0.3, complexity_gap_pct=86,
+        expected_review_pct=20, actual_review_pct=2, review_gap_pct=90,
+        svr=0.21, projected_proficient_month=72, expected_proficient_month=28, timeline_cost_months=44,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Vikram P.", tenure_months=22,
+        expected_score_growth=38, actual_score_growth=24, gap_pct=37,
+        expected_complexity_growth=2.1, actual_complexity_growth=1.2, complexity_gap_pct=43,
+        expected_review_pct=65, actual_review_pct=34, review_gap_pct=48,
+        svr=0.55, projected_proficient_month=38, expected_proficient_month=28, timeline_cost_months=10,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Anita D.", tenure_months=11,
+        expected_score_growth=38, actual_score_growth=10, gap_pct=74,
+        expected_complexity_growth=2.1, actual_complexity_growth=0.4, complexity_gap_pct=81,
+        expected_review_pct=30, actual_review_pct=5, review_gap_pct=83,
+        svr=0.26, projected_proficient_month=62, expected_proficient_month=28, timeline_cost_months=34,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Rohit S.", tenure_months=24,
+        expected_score_growth=38, actual_score_growth=28, gap_pct=26,
+        expected_complexity_growth=2.1, actual_complexity_growth=1.5, complexity_gap_pct=29,
+        expected_review_pct=70, actual_review_pct=48, review_gap_pct=31,
+        svr=0.72, projected_proficient_month=34, expected_proficient_month=28, timeline_cost_months=6,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Neha K.", tenure_months=6,
+        expected_score_growth=38, actual_score_growth=5, gap_pct=87,
+        expected_complexity_growth=2.1, actual_complexity_growth=0.2, complexity_gap_pct=90,
+        expected_review_pct=15, actual_review_pct=1, review_gap_pct=93,
+        svr=0.13, projected_proficient_month=84, expected_proficient_month=28, timeline_cost_months=56,
+    ),
+    SeniorityVelocityDeficit(
+        developer="Karthik V.", tenure_months=16,
+        expected_score_growth=38, actual_score_growth=18, gap_pct=53,
+        expected_complexity_growth=2.1, actual_complexity_growth=0.8, complexity_gap_pct=62,
+        expected_review_pct=50, actual_review_pct=16, review_gap_pct=68,
+        svr=0.38, projected_proficient_month=52, expected_proficient_month=28, timeline_cost_months=24,
+    ),
+]
+
+
+TEAM_PIPELINE_RISK = [
+    TeamPipelineRisk(
+        team="Platform Team", juniors_tracked=8, avg_jdi_trend=-28,
+        avg_svr=0.44, devs_on_atrophy=6, atrophy_pct=75,
+        risk_score=78, risk_level="HIGH",
+        external_hire_by="Q1 2028",
+    ),
+    TeamPipelineRisk(
+        team="Frontend Squad", juniors_tracked=5, avg_jdi_trend=-34,
+        avg_svr=0.38, devs_on_atrophy=4, atrophy_pct=80,
+        risk_score=84, risk_level="CRITICAL",
+        external_hire_by="Q3 2027",
+    ),
+    TeamPipelineRisk(
+        team="Data Engineering", juniors_tracked=4, avg_jdi_trend=-15,
+        avg_svr=0.62, devs_on_atrophy=2, atrophy_pct=50,
+        risk_score=52, risk_level="MODERATE",
+        external_hire_by="Q2 2029",
+    ),
+    TeamPipelineRisk(
+        team="DevOps / SRE", juniors_tracked=3, avg_jdi_trend=-8,
+        avg_svr=0.78, devs_on_atrophy=1, atrophy_pct=33,
+        risk_score=31, risk_level="LOW",
+        external_hire_by="Q4 2030",
+    ),
+]
+
+
+ORG_PIPELINE_DEBT = OrgPipelineDebtReport(
+    quarter="Q1 2026",
+    severe_atrophy_count=14,
+    total_juniors=23,
+    atrophy_pct=61,
+    avg_svr=0.42,
+    svr_gap_below_ok=31,
+    projected_senior_gap=9,
+    gap_by_quarter="Q3 2028",
+    cost_per_external_hire=34000,
+    ramp_premium_per_role=18000,
+    knowledge_loss_per_role=22000,
+    total_pipeline_debt=666000,
+    preventable_by="Q3 2026",
+    interventions=[
+        InterventionOption(
+            option="Option A",
+            description="Structured AI-free learning sprints (2 hrs/wk)",
+            quarterly_cost="$8,400",
+            debt_reduction="$420,000",
+        ),
+        InterventionOption(
+            option="Option B",
+            description="Pair programming mandates on architecture tasks",
+            quarterly_cost="$14,200",
+            debt_reduction="$580,000",
+        ),
+    ],
+)
+
+
+def get_full_dashboard() -> dict:
+    return {
+        "developers": DEVELOPERS,
+        "benefit_curve": BENEFIT_CURVE,
+        "impact_timeline": IMPACT_TIMELINE,
+        "benefit_harm": BENEFIT_HARM,
+        "productivity_timelines": PRODUCTIVITY_TIMELINES,
+        "reverse_alerts": REVERSE_ALERTS,
+        "trust_scores": TRUST_SCORES,
+        "seniority_profiles": SENIORITY_PROFILES,
+        "ai_impact_dashboards": AI_IMPACT_DASHBOARDS,
+        "junior_dependency_indices": JUNIOR_DEPENDENCY_INDICES,
+        "seniority_velocity_deficits": SENIORITY_VELOCITY_DEFICITS,
+        "team_pipeline_risk": TEAM_PIPELINE_RISK,
+        "org_pipeline_debt": ORG_PIPELINE_DEBT,
+    }
 
 
 def switch_mode(dev_name: str, mode: str) -> Developer | None:

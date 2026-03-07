@@ -2,10 +2,16 @@ import { useState, useEffect } from 'react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, LineChart, Line, Cell, RadarChart, PolarGrid, PolarAngleAxis,
-    PolarRadiusAxis, Radar, Legend,
+    PolarRadiusAxis, Radar, Legend, PieChart, Pie,
 } from 'recharts'
-import { CheckCircle, XCircle, Download, ArrowRight, AlertTriangle, Clock, TrendingUp, Zap, Shield } from 'lucide-react'
-import { leadershipApi, LVDeveloperFriction, LVFrictionTrendPoint, LVImpactSimulation, LVEmpathyDimension, LVLeadershipBriefing, LVEscalationItem } from '../api/client'
+import { CheckCircle, XCircle, Download, ArrowRight, AlertTriangle, Clock, TrendingUp, Zap, Shield, DollarSign, Users, Eye } from 'lucide-react'
+import {
+    leadershipApi, LVDeveloperFriction, LVFrictionTrendPoint, LVImpactSimulation,
+    LVEmpathyDimension, LVLeadershipBriefing, LVEscalationItem,
+    LVRTFrictionRow, LVNetAIROI, LVLeadershipBriefObj,
+    LVDecisionEvent, LVDecisionImpactMeasurement, LVFrictionDebtLedger,
+    LVBidirectionalDashboard, LVEmpathyROIReport,
+} from '../api/client'
 
 export default function LeadershipView() {
     const [surveyOpen, setSurveyOpen] = useState(false)
@@ -25,6 +31,15 @@ export default function LeadershipView() {
     const [empathyDimensions, setEmpathyDimensions] = useState<LVEmpathyDimension[]>([])
     const [briefing, setBriefing] = useState<LVLeadershipBriefing | null>(null)
     const [escalations, setEscalations] = useState<LVEscalationItem[]>([])
+    const [rtFriction, setRtFriction] = useState<LVRTFrictionRow[]>([])
+    const [netAiRoi, setNetAiRoi] = useState<LVNetAIROI | null>(null)
+    const [leaderBrief, setLeaderBrief] = useState<LVLeadershipBriefObj | null>(null)
+    const [decisionEvents, setDecisionEvents] = useState<LVDecisionEvent[]>([])
+    const [decisionMeasurements, setDecisionMeasurements] = useState<LVDecisionImpactMeasurement[]>([])
+    const [debtLedger, setDebtLedger] = useState<LVFrictionDebtLedger | null>(null)
+    const [biDashboard, setBiDashboard] = useState<LVBidirectionalDashboard | null>(null)
+    const [empathyRoi, setEmpathyRoi] = useState<LVEmpathyROIReport | null>(null)
+    const [activeDecisionIdx, setActiveDecisionIdx] = useState(0)
 
     useEffect(() => {
         leadershipApi.dashboard().then((d) => {
@@ -64,6 +79,14 @@ export default function LeadershipView() {
             setEmpathyDimensions(d.empathy_dimensions)
             setBriefing(d.leadership_briefing)
             setEscalations(d.escalations)
+            setRtFriction(d.rt_friction_heatmap || [])
+            setNetAiRoi(d.net_ai_roi || null)
+            setLeaderBrief(d.leadership_brief || null)
+            setDecisionEvents(d.decision_events || [])
+            setDecisionMeasurements(d.decision_impact_measurements || [])
+            setDebtLedger(d.friction_debt_ledger || null)
+            setBiDashboard(d.bidirectional_dashboard || null)
+            setEmpathyRoi(d.empathy_roi_report || null)
             setLoading(false)
         }).catch((err) => { console.error('Leadership fetch error:', err); setLoading(false) })
     }, [])
@@ -718,6 +741,564 @@ export default function LeadershipView() {
                             <><span className="text-red-400 font-semibold">{actionLoop.filter(a => a.status === 'ignored').length} developer issue{actionLoop.filter(a => a.status === 'ignored').length > 1 ? 's' : ''}</span> ignored by leadership. </>
                         )}
                         Annual surveys miss the real story. <span className="text-cyan-400 font-semibold">Daily micro-pulses</span> + <span className="text-purple-400 font-semibold">automatic executive translation</span> + <span className="text-amber-400 font-semibold">decision impact tracking</span> close the empathy gap — showing leaders exactly what their decisions cost in developer hours and dollars.
+                    </p>
+                </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  REAL-TIME DEVELOPER FRICTION HEATMAP + NET AI ROI
+            ═══════════════════════════════════════════════════════════════════ */}
+            {rtFriction.length > 0 && netAiRoi && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(239,68,68,0.2)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <TrendingUp size={16} style={{ color: '#EF4444' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">🔥 Real-Time Developer Friction Heatmap</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    Passive telemetry — no surveys, no fatigue. Every friction source time-attributed with dollar cost.
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
+                            Platform Engineering · Week Mar 3
+                        </span>
+                    </div>
+
+                    {/* Friction source rows */}
+                    <div className="space-y-2 mb-4">
+                        {rtFriction.map((row) => {
+                            const dirColor = row.trend_direction === 'up' || row.trend_direction === 'new' ? '#EF4444' : row.trend_direction === 'down' ? '#10B981' : '#F59E0B'
+                            return (
+                                <div key={row.source} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid #1E2D4A' }}>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium text-white">{row.source}</p>
+                                    </div>
+                                    <div className="w-32 shrink-0">
+                                        <div className="progress-bar h-2">
+                                            <div className="progress-fill" style={{ width: `${(row.hours_lost / 50) * 100}%`, background: `linear-gradient(90deg, ${dirColor}88, ${dirColor})` }} />
+                                        </div>
+                                    </div>
+                                    <span className="text-sm font-black w-16 text-right shrink-0" style={{ color: '#EF4444' }}>{row.hours_lost}h</span>
+                                    <span className="text-xs font-bold w-20 text-right shrink-0" style={{ color: '#F59E0B' }}>${row.team_cost.toLocaleString()}</span>
+                                    <span className="text-xs w-28 text-right shrink-0 font-medium" style={{ color: dirColor }}>{row.trend}</span>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Net AI ROI row */}
+                    <div className="p-4 rounded-xl" style={{ background: netAiRoi.net_status === 'negative' ? 'rgba(239,68,68,0.06)' : 'rgba(16,185,129,0.06)', border: `1px solid ${netAiRoi.net_status === 'negative' ? 'rgba(239,68,68,0.2)' : 'rgba(16,185,129,0.2)'}` }}>
+                        <div className="grid grid-cols-4 gap-4">
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>Total Friction Cost</p>
+                                <p className="text-lg font-black" style={{ color: '#EF4444' }}>${netAiRoi.total_friction_cost.toLocaleString()}</p>
+                                <p className="text-xs" style={{ color: '#64748B' }}>{netAiRoi.total_friction_hours}h lost</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>AI Savings</p>
+                                <p className="text-lg font-black" style={{ color: '#10B981' }}>${netAiRoi.ai_cost_saved.toLocaleString()}</p>
+                                <p className="text-xs" style={{ color: '#64748B' }}>{netAiRoi.ai_hours_saved}h saved</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs font-bold" style={{ color: netAiRoi.net_status === 'negative' ? '#EF4444' : '#10B981' }}>NET AI ROI</p>
+                                <p className="text-2xl font-black" style={{ color: netAiRoi.net_status === 'negative' ? '#EF4444' : '#10B981' }}>
+                                    {netAiRoi.net_roi_dollars > 0 ? '+' : ''}${netAiRoi.net_roi_dollars.toLocaleString()}
+                                </p>
+                                <p className="text-xs font-bold" style={{ color: netAiRoi.net_status === 'negative' ? '#EF4444' : '#10B981' }}>
+                                    {netAiRoi.net_status === 'negative' ? '🔴 NEGATIVE' : '🟢 POSITIVE'}
+                                </p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>Consecutive Wks Negative</p>
+                                <p className="text-lg font-black" style={{ color: netAiRoi.consecutive_weeks_negative > 0 ? '#EF4444' : '#10B981' }}>
+                                    {netAiRoi.consecutive_weeks_negative}
+                                </p>
+                                <p className="text-xs" style={{ color: '#64748B' }}>weeks</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  LEADERSHIP TRANSLATION BRIEF (Auto-Generated)
+            ═══════════════════════════════════════════════════════════════════ */}
+            {leaderBrief && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(124,58,237,0.2)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Eye size={16} style={{ color: '#7C3AED' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">📋 Auto-Generated Leadership Brief — {leaderBrief.recipient_role}</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    {leaderBrief.period} · Focus: {leaderBrief.focus} · Friction data → executive KPI language
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-bold" style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
+                                Empathy: {leaderBrief.empathy_score}/100
+                            </span>
+                            <span className="text-xs" style={{ color: '#94A3B8' }}>
+                                Acted: {leaderBrief.alerts_acted}/{leaderBrief.alerts_sent} ({leaderBrief.alerts_acted_pct}%)
+                            </span>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {leaderBrief.items.map((item, i) => {
+                            const title = String(item.title ?? '')
+                            const hrsBlocked = item.hours_blocked != null ? String(item.hours_blocked) : ''
+                            const cost = item.cost != null ? Number(item.cost) : 0
+                            const estSaving = item.estimated_weekly_saving != null ? Number(item.estimated_weekly_saving) : 0
+                            const trend = item.trend ? String(item.trend) : ''
+                            const rootCause = item.root_cause ? String(item.root_cause) : ''
+                            const fix = item.fix ? String(item.fix) : ''
+                            const netStatus = item.net_status ? String(item.net_status) : ''
+                            return (
+                            <div key={i} className="p-4 rounded-xl" style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid rgba(124,58,237,0.12)' }}>
+                                <p className="text-xs font-bold text-white mb-2">→ {title}</p>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {hrsBlocked && (
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-sm font-black" style={{ color: '#EF4444' }}>{hrsBlocked}h</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 10 }}>Hours blocked</p>
+                                        </div>
+                                    )}
+                                    {cost > 0 && (
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-sm font-black" style={{ color: '#F59E0B' }}>${cost.toLocaleString()}</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 10 }}>Weekly cost</p>
+                                        </div>
+                                    )}
+                                    {estSaving > 0 && (
+                                        <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                            <p className="text-sm font-black" style={{ color: '#10B981' }}>${estSaving.toLocaleString()}</p>
+                                            <p style={{ color: '#94A3B8', fontSize: 10 }}>Potential saving</p>
+                                        </div>
+                                    )}
+                                </div>
+                                {trend && <p className="text-xs mt-2" style={{ color: '#F59E0B' }}>📈 {trend}</p>}
+                                {rootCause && <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>🔍 Root cause: {rootCause}</p>}
+                                {fix && <p className="text-xs mt-1" style={{ color: '#10B981' }}>💡 Fix: {fix}</p>}
+                                {netStatus && <p className="text-xs mt-1 font-bold" style={{ color: '#EF4444' }}>⚠️ {netStatus}</p>}
+                            </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  DECISION IMPACT MEASUREMENT (Pre/Post Windows)
+            ═══════════════════════════════════════════════════════════════════ */}
+            {decisionMeasurements.length > 0 && (
+                <div className="glass-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Zap size={16} style={{ color: '#F59E0B' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">⚡ Decision Impact Measurement — Pre/Post Windows</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    Every leadership decision measured with 2-week baseline, 4-week impact, and causal attribution
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {decisionMeasurements.map((dm, i) => {
+                                const dmColor = dm.status === 'mitigated' ? '#10B981' : dm.status === 'partial' ? '#F59E0B' : '#EF4444'
+                                return (
+                                    <button key={dm.decision_id}
+                                        className="text-xs px-2 py-1 rounded-lg font-medium transition-all"
+                                        style={{
+                                            background: activeDecisionIdx === i ? `${dmColor}15` : 'rgba(30,45,74,0.5)',
+                                            color: activeDecisionIdx === i ? dmColor : '#94A3B8',
+                                            border: `1px solid ${activeDecisionIdx === i ? `${dmColor}33` : '#1E2D4A'}`,
+                                        }}
+                                        onClick={() => setActiveDecisionIdx(i)}
+                                    >
+                                        {dm.decision_id}
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {(() => {
+                        const dm = decisionMeasurements[activeDecisionIdx]
+                        if (!dm) return null
+                        const stColor = dm.status === 'mitigated' ? '#10B981' : dm.status === 'partial' ? '#F59E0B' : '#EF4444'
+                        const mergeChange = dm.post_merge_time_hrs > dm.pre_merge_time_hrs
+                            ? `+${Math.round((dm.post_merge_time_hrs - dm.pre_merge_time_hrs) / dm.pre_merge_time_hrs * 100)}%`
+                            : `${Math.round((dm.post_merge_time_hrs - dm.pre_merge_time_hrs) / dm.pre_merge_time_hrs * 100)}%`
+                        const blockedChange = dm.post_blocked_tickets > dm.pre_blocked_tickets
+                            ? `+${Math.round((dm.post_blocked_tickets - dm.pre_blocked_tickets) / dm.pre_blocked_tickets * 100)}%`
+                            : `${Math.round((dm.post_blocked_tickets - dm.pre_blocked_tickets) / dm.pre_blocked_tickets * 100)}%`
+                        return (
+                            <div>
+                                {/* Decision header */}
+                                <div className="p-3 rounded-xl mb-4" style={{ background: `${stColor}06`, border: `1px solid ${stColor}20` }}>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <p className="text-xs font-bold text-white">{dm.decision}</p>
+                                        <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${stColor}15`, color: stColor }}>
+                                            {dm.status === 'mitigated' ? '🟢 Mitigated' : dm.status === 'partial' ? '🟠 Partial' : '🔴 Not Mitigated'}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                        By {dm.decision_maker} · {dm.enacted_date} · Scope: {dm.scope} · {dm.weeks_since} weeks since
+                                    </p>
+                                </div>
+
+                                {/* Pre/Post comparison grid */}
+                                <div className="grid grid-cols-4 gap-3 mb-4">
+                                    {[
+                                        { label: 'Merge Time', pre: `${dm.pre_merge_time_hrs}h`, post: `${dm.post_merge_time_hrs}h`, change: mergeChange, worse: dm.post_merge_time_hrs > dm.pre_merge_time_hrs },
+                                        { label: 'Blocked Tickets/wk', pre: String(dm.pre_blocked_tickets), post: String(dm.post_blocked_tickets), change: blockedChange, worse: dm.post_blocked_tickets > dm.pre_blocked_tickets },
+                                        { label: 'Friction hrs/wk', pre: `${dm.pre_friction_hrs}`, post: `${dm.post_friction_hrs}`, change: `${dm.net_friction_hrs > 0 ? '+' : ''}${dm.net_friction_hrs}h`, worse: dm.net_friction_hrs > 0 },
+                                        { label: 'Approval Loops/wk', pre: String(dm.pre_approval_loops), post: String(dm.post_approval_loops), change: `${dm.post_approval_loops > dm.pre_approval_loops ? '+' : ''}${Math.round((dm.post_approval_loops - dm.pre_approval_loops) / dm.pre_approval_loops * 100)}%`, worse: dm.post_approval_loops > dm.pre_approval_loops },
+                                    ].map((m) => (
+                                        <div key={m.label} className="p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                            <p className="text-xs mb-2" style={{ color: '#94A3B8' }}>{m.label}</p>
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <p className="text-xs" style={{ color: '#64748B' }}>Pre</p>
+                                                    <p className="text-sm font-bold text-white">{m.pre}</p>
+                                                </div>
+                                                <ArrowRight size={12} style={{ color: '#64748B' }} />
+                                                <div>
+                                                    <p className="text-xs" style={{ color: '#64748B' }}>Post</p>
+                                                    <p className="text-sm font-bold" style={{ color: m.worse ? '#EF4444' : '#10B981' }}>{m.post}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs font-bold text-center mt-1" style={{ color: m.worse ? '#EF4444' : '#10B981' }}>{m.change}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Attribution + Financial impact */}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                        <p className="text-xs font-bold text-white mb-2">📊 Causal Attribution</p>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <span className="text-xs" style={{ color: '#94A3B8' }}>Confidence:</span>
+                                            <div className="flex-1">
+                                                <div className="progress-bar h-2">
+                                                    <div className="progress-fill" style={{ width: `${dm.causal_score * 100}%`, background: dm.causal_score > 0.7 ? '#10B981' : '#F59E0B' }} />
+                                                </div>
+                                            </div>
+                                            <span className="text-xs font-bold" style={{ color: dm.causal_score > 0.7 ? '#10B981' : '#F59E0B' }}>{dm.causal_score.toFixed(2)}</span>
+                                        </div>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                            Net friction: <span className="font-bold" style={{ color: dm.net_friction_hrs > 0 ? '#EF4444' : '#10B981' }}>{dm.net_friction_hrs > 0 ? '+' : ''}{dm.net_friction_hrs}h/wk</span>
+                                        </p>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                            Financial: <span className="font-bold" style={{ color: dm.financial_impact_week > 0 ? '#EF4444' : '#10B981' }}>${Math.abs(dm.financial_impact_week).toLocaleString()}/wk</span> ({dm.financial_impact_week > 0 ? 'cost' : 'saving'})
+                                        </p>
+                                        <p className="text-xs mt-1" style={{ color: '#F59E0B' }}>
+                                            Cumulative: <span className="font-bold">${Math.abs(dm.cumulative_cost).toLocaleString()}</span> over {dm.weeks_since}wk
+                                        </p>
+                                    </div>
+                                    <div className="p-3 rounded-xl" style={{ background: dm.status !== 'mitigated' ? 'rgba(245,158,11,0.04)' : 'rgba(16,185,129,0.04)', border: `1px solid ${dm.status !== 'mitigated' ? 'rgba(245,158,11,0.15)' : 'rgba(16,185,129,0.15)'}` }}>
+                                        <p className="text-xs font-bold text-white mb-2">💡 Mitigation</p>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>{dm.mitigation_available}</p>
+                                        {dm.mitigation_cost > 0 && (
+                                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                                <div className="text-center p-1.5 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                    <p className="text-xs font-black" style={{ color: '#F59E0B' }}>${dm.mitigation_cost.toLocaleString()}</p>
+                                                    <p style={{ color: '#94A3B8', fontSize: 9 }}>One-time cost</p>
+                                                </div>
+                                                <div className="text-center p-1.5 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                    <p className="text-xs font-black" style={{ color: '#10B981' }}>${dm.mitigation_weekly_saving.toLocaleString()}/wk</p>
+                                                    <p style={{ color: '#94A3B8', fontSize: 9 }}>Weekly saving</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )
+                    })()}
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  FRICTION DEBT LEDGER
+            ═══════════════════════════════════════════════════════════════════ */}
+            {debtLedger && (
+                <div className="glass-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <DollarSign size={16} style={{ color: '#EF4444' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">📒 Friction Debt Ledger — {debtLedger.quarter}</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    {debtLedger.org} — Every leadership decision financially attributed with running accountability trail
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-1 rounded-full" style={{
+                            background: debtLedger.net_friction_debt > 50000 ? 'rgba(239,68,68,0.12)' : 'rgba(245,158,11,0.12)',
+                            color: debtLedger.net_friction_debt > 50000 ? '#EF4444' : '#F59E0B',
+                        }}>
+                            Net Debt: ${debtLedger.net_friction_debt.toLocaleString()}
+                        </span>
+                    </div>
+
+                    {/* Ledger entries */}
+                    <div className="space-y-2 mb-4">
+                        {debtLedger.entries.map((entry, i) => {
+                            const entryColor = entry.resolution === 'roi_positive' ? '#10B981' : entry.resolution === 'resolved' ? '#10B981' : entry.resolution === 'partial' ? '#F59E0B' : '#EF4444'
+                            return (
+                                <div key={i} className="flex items-center gap-3 p-3 rounded-xl" style={{ background: `${entryColor}04`, border: `1px solid ${entryColor}18` }}>
+                                    <span className="text-sm shrink-0">{entry.status_icon}</span>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium text-white">{entry.decision}</p>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>{entry.maker} · {entry.duration_weeks}wk</p>
+                                    </div>
+                                    <span className="text-sm font-black w-24 text-right shrink-0" style={{ color: entry.cumulative_cost < 0 ? '#10B981' : '#EF4444' }}>
+                                        {entry.cumulative_cost < 0 ? '-' : ''}${Math.abs(entry.cumulative_cost).toLocaleString()}
+                                    </span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full font-semibold shrink-0" style={{ background: `${entryColor}15`, color: entryColor }}>
+                                        {entry.resolution === 'roi_positive' ? 'ROI+' : entry.resolution === 'resolved' ? 'Fixed' : entry.resolution === 'partial' ? 'Partial' : 'Unresolved'}
+                                    </span>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Ledger totals */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="text-center p-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.12)' }}>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>Friction Introduced</p>
+                            <p className="text-lg font-black" style={{ color: '#EF4444' }}>+${debtLedger.total_friction_introduced.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.12)' }}>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>Friction Saved</p>
+                            <p className="text-lg font-black" style={{ color: '#10B981' }}>-${debtLedger.total_friction_saved.toLocaleString()}</p>
+                        </div>
+                        <div className="text-center p-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                            <p className="text-xs font-bold" style={{ color: '#EF4444' }}>NET FRICTION DEBT</p>
+                            <p className="text-lg font-black" style={{ color: '#EF4444' }}>${debtLedger.net_friction_debt.toLocaleString()}</p>
+                        </div>
+                    </div>
+
+                    {/* Decision Quality Scores per leader */}
+                    <div>
+                        <p className="text-xs font-semibold text-white mb-2">📊 Decision Quality Score — Per Leader</p>
+                        <div className="grid grid-cols-4 gap-3">
+                            {debtLedger.decision_quality_scores.map((dqs, i) => {
+                                const dqColor = dqs.status === 'green' ? '#10B981' : dqs.status === 'amber' ? '#F59E0B' : '#EF4444'
+                                return (
+                                    <div key={i} className="p-3 rounded-xl text-center" style={{ background: `${dqColor}06`, border: `1px solid ${dqColor}20` }}>
+                                        <p className="text-xs font-mono font-medium" style={{ color: '#94A3B8' }}>{dqs.leader}</p>
+                                        <div className="w-14 h-14 rounded-full mx-auto mt-2 flex flex-col items-center justify-center"
+                                            style={{ background: `conic-gradient(${dqColor} 0% ${dqs.score}%, #1E2D4A ${dqs.score}% 100%)`, padding: 3 }}>
+                                            <div className="w-full h-full rounded-full flex flex-col items-center justify-center" style={{ background: '#0F1629' }}>
+                                                <span className="text-sm font-black" style={{ color: dqColor }}>{dqs.score}</span>
+                                            </div>
+                                        </div>
+                                        <p className="text-xs font-bold mt-1" style={{ color: dqColor }}>{dqs.label}</p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  BIDIRECTIONAL ACCOUNTABILITY DASHBOARD
+            ═══════════════════════════════════════════════════════════════════ */}
+            {biDashboard && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(0,212,255,0.2)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Users size={16} style={{ color: '#00D4FF' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">👁️ Developer Action Loop — Bidirectional Accountability</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    {biDashboard.developer} · {biDashboard.team} — Did leadership act on your reported friction?
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: `${biDashboard.empathy_score < 45 ? '#EF4444' : '#F59E0B'}15`, color: biDashboard.empathy_score < 45 ? '#EF4444' : '#F59E0B' }}>
+                                Empathy: {biDashboard.empathy_score}/100
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Action loop items */}
+                    <div className="space-y-3 mb-4">
+                        {biDashboard.action_loops.map((al, i) => {
+                            const alColor = al.response_status === 'acted' ? '#10B981' : '#EF4444'
+                            return (
+                                <div key={i} className="p-4 rounded-xl" style={{ background: `${alColor}04`, border: `1px solid ${alColor}18` }}>
+                                    <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center gap-2">
+                                            {al.response_status === 'acted'
+                                                ? <CheckCircle size={14} style={{ color: '#10B981' }} />
+                                                : <XCircle size={14} style={{ color: '#EF4444' }} />}
+                                            <p className="text-xs font-bold text-white">{al.friction_flagged}</p>
+                                        </div>
+                                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ background: `${alColor}15`, color: alColor }}>
+                                            {al.response_status === 'acted' ? '✅ Acted' : '❌ No Action'}
+                                        </span>
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4 text-xs">
+                                        <div>
+                                            <p style={{ color: '#94A3B8' }}>First reported: <span className="text-white">{al.first_reported}</span> · Alerts sent: <span className="text-white">{al.alerts_sent}</span></p>
+                                            <p className="mt-1" style={{ color: '#94A3B8' }}>Leader response: <span style={{ color: al.response_status === 'acted' ? '#10B981' : '#EF4444' }}>{al.leader_response}</span></p>
+                                            {al.response_status === 'acted' && <p className="mt-1" style={{ color: '#10B981' }}>Outcome: {al.outcome_measured}</p>}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                <p className="text-xs font-black" style={{ color: '#EF4444' }}>{al.personal_hours_affected}h</p>
+                                                <p style={{ color: '#94A3B8', fontSize: 9 }}>Your hours (${al.personal_cost.toLocaleString()})</p>
+                                            </div>
+                                            <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                <p className="text-xs font-black" style={{ color: '#F59E0B' }}>{al.team_hours_affected}h</p>
+                                                <p style={{ color: '#94A3B8', fontSize: 9 }}>Team (${al.team_cost.toLocaleString()})</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+
+                    {/* Quarterly summary */}
+                    <div className="p-4 rounded-xl" style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid #1E2D4A' }}>
+                        <p className="text-xs font-bold text-white mb-2">📊 Quarterly Action Summary</p>
+                        <div className="grid grid-cols-4 gap-3">
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>Alerts This Q</p>
+                                <p className="text-lg font-black text-white">{biDashboard.alerts_this_quarter}</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>Acted {'<'}2wk</p>
+                                <p className="text-lg font-black" style={{ color: '#10B981' }}>{biDashboard.acted_within_2wk} ({Math.round(biDashboard.acted_within_2wk / biDashboard.alerts_this_quarter * 100)}%)</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>Acted {'>'}2wk</p>
+                                <p className="text-lg font-black" style={{ color: '#F59E0B' }}>{biDashboard.acted_after_2wk} ({Math.round(biDashboard.acted_after_2wk / biDashboard.alerts_this_quarter * 100)}%)</p>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>Not Acted</p>
+                                <p className="text-lg font-black" style={{ color: '#EF4444' }}>{biDashboard.not_acted} ({Math.round(biDashboard.not_acted / biDashboard.alerts_this_quarter * 100)}%)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  QUARTERLY EMPATHY ROI REPORT
+            ═══════════════════════════════════════════════════════════════════ */}
+            {empathyRoi && (
+                <div className="glass-card p-5" style={{ border: '1px solid rgba(124,58,237,0.2)' }}>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Shield size={16} style={{ color: '#7C3AED' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">📈 Empathy ROI Report — {empathyRoi.quarter}</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    The financial return on leadership responsiveness — translating empathy into capital allocation
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-1 rounded-full" style={{ background: 'rgba(124,58,237,0.12)', color: '#A78BFA' }}>
+                            ROI: {empathyRoi.empathy_roi_multiplier}x
+                        </span>
+                    </div>
+
+                    {/* Top-line KPIs */}
+                    <div className="grid grid-cols-5 gap-3 mb-4">
+                        {[
+                            { label: 'Actions Taken', value: `${empathyRoi.actions_taken}/${empathyRoi.total_alerts}`, color: empathyRoi.actions_taken < empathyRoi.total_alerts / 2 ? '#EF4444' : '#10B981' },
+                            { label: 'Cost Reduced', value: `$${(empathyRoi.friction_cost_reduced / 1000).toFixed(1)}K`, color: '#10B981' },
+                            { label: 'Cost Persisting', value: `$${(empathyRoi.friction_cost_persisting / 1000).toFixed(1)}K`, color: '#EF4444' },
+                            { label: 'Forgone ROI', value: `$${(empathyRoi.net_forgone_roi / 1000).toFixed(1)}K`, color: '#F59E0B' },
+                            { label: 'Empathy ROI', value: `${empathyRoi.empathy_roi_multiplier}x`, color: '#7C3AED' },
+                        ].map((m) => (
+                            <div key={m.label} className="text-center p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>{m.label}</p>
+                                <p className="text-lg font-black" style={{ color: m.color }}>{m.value}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* If leadership had acted */}
+                    <div className="p-4 rounded-xl mb-4" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.12)' }}>
+                        <p className="text-xs font-bold mb-2" style={{ color: '#F59E0B' }}>💡 If leadership had acted on all {empathyRoi.total_alerts} alerts within 2 weeks:</p>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                <p className="text-xs font-black" style={{ color: '#10B981' }}>${empathyRoi.estimated_additional_recovery.toLocaleString()}</p>
+                                <p style={{ color: '#94A3B8', fontSize: 10 }}>Additional recovery</p>
+                            </div>
+                            <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                <p className="text-xs font-black" style={{ color: '#F59E0B' }}>${empathyRoi.cost_of_interventions.toLocaleString()}</p>
+                                <p style={{ color: '#94A3B8', fontSize: 10 }}>Cost of interventions</p>
+                            </div>
+                            <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                <p className="text-xs font-black" style={{ color: '#EF4444' }}>${empathyRoi.net_forgone_roi.toLocaleString()}</p>
+                                <p style={{ color: '#94A3B8', fontSize: 10 }}>Net forgone ROI from inaction</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Empathy score trend */}
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                            <p className="text-xs font-bold text-white mb-2">Empathy Score Trend</p>
+                            <div className="flex items-end gap-3 h-12">
+                                {empathyRoi.empathy_score_trend.map((s, i) => (
+                                    <div key={i} className="flex-1 flex flex-col items-center">
+                                        <div className="w-full rounded-t" style={{ height: `${s}%`, background: s < 35 ? '#EF4444' : s < 50 ? '#F59E0B' : '#10B981', minHeight: 8 }} />
+                                        <span className="text-xs mt-1" style={{ color: '#94A3B8', fontSize: 9 }}>{s}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <p className="text-xs text-center mt-2" style={{ color: empathyRoi.empathy_score_trend[empathyRoi.empathy_score_trend.length - 1] < empathyRoi.empathy_score_trend[0] ? '#EF4444' : '#10B981' }}>
+                                {empathyRoi.empathy_score_trend[empathyRoi.empathy_score_trend.length - 1] < empathyRoi.empathy_score_trend[0] ? '↓ Declining' : '↑ Improving'}
+                            </p>
+                        </div>
+                        <div className="space-y-3">
+                            {/* Highest ROI intervention */}
+                            <div className="p-3 rounded-xl" style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.15)' }}>
+                                <p className="text-xs font-bold mb-1" style={{ color: '#10B981' }}>🏆 Highest ROI Intervention</p>
+                                <p className="text-xs text-white">{String(empathyRoi.highest_roi_intervention.intervention || '')}</p>
+                                <p className="text-xs" style={{ color: '#10B981' }}>
+                                    ${Number(empathyRoi.highest_roi_intervention.savings || 0).toLocaleString()} saved · {String(empathyRoi.highest_roi_intervention.roi_multiplier || '')}x ROI
+                                </p>
+                            </div>
+                            {/* Lowest ROI non-decision */}
+                            <div className="p-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                                <p className="text-xs font-bold mb-1" style={{ color: '#EF4444' }}>⚠️ Costliest Non-Decision</p>
+                                <p className="text-xs text-white">{String(empathyRoi.lowest_roi_non_decision.issue || '')}</p>
+                                <p className="text-xs" style={{ color: '#EF4444' }}>
+                                    ${Number(empathyRoi.lowest_roi_non_decision.cost || 0).toLocaleString()} cost · {String(empathyRoi.lowest_roi_non_decision.interventions || 0)} interventions
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Enterprise Empathy Intelligence */}
+            <div
+                className="flex items-center gap-4 px-5 py-4 rounded-xl"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(0,212,255,0.06))',
+                    border: '1px solid rgba(124,58,237,0.18)',
+                }}
+            >
+                <div className="text-2xl">💎</div>
+                <div>
+                    <p className="text-sm font-semibold text-white">Enterprise Decision Intelligence</p>
+                    <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                        Every survey tells your leaders developers are frustrated. We are the <span className="text-cyan-400 font-semibold">only platform</span> that tells them which specific decision they made is costing <span className="text-red-400 font-semibold">{debtLedger ? `$${(debtLedger.net_friction_debt / 1000).toFixed(0)}K` : '$85K'}</span> in absorbed developer capacity, shows developers in real time whether their leaders actually responded, and gives your CTO a quarterly financial score of every leader's <span className="text-purple-400 font-semibold">empathy ROI</span>.
+                        {netAiRoi && <> AI saves <span className="text-emerald-400 font-bold">{netAiRoi.ai_hours_saved}h/wk</span> · Friction consumes <span className="text-red-400 font-bold">{netAiRoi.total_friction_hours}h/wk</span> · <span className="font-bold" style={{ color: netAiRoi.net_status === 'negative' ? '#EF4444' : '#10B981' }}>Net ROI: ${netAiRoi.net_roi_dollars.toLocaleString()}</span></>}
                     </p>
                 </div>
             </div>

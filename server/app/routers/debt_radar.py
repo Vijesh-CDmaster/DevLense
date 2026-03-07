@@ -7,14 +7,21 @@ from app.models.debt_radar import (
     DebtModule, SprintDebt, RefactorItem,
     StagedFile, SurvivalPrediction, BudgetTracker,
     ScoreFileRequest, ScoreFileResponse, BudgetSettingsRequest,
+    PreCommitScan, SprintDebtProjection,
+    ModuleCouplingDrift, ServiceBoundaryViolation,
+    GenerativeMonoculture, ArchitecturalHealthScore, ArchDriftSummary,
 )
 from app.data.debt_radar_data import (
     get_full_dashboard,
     get_modules, get_sprint_debt, get_refactor_queue,
     get_staged_files, get_survival_predictions, get_budget_tracker,
     resolve_refactor_item, update_budget_settings,
+    PRE_COMMIT_SCANS, SPRINT_DEBT_PROJECTIONS,
+    MODULE_COUPLING_DRIFT, SERVICE_BOUNDARY_VIOLATIONS,
+    GENERATIVE_MONOCULTURES, ARCHITECTURAL_HEALTH_SCORE,
 )
 from app.services import debt_scorer
+from app.services.arch_drift import compute_arch_drift_summary
 
 router = APIRouter(prefix="/api/debt-radar", tags=["Debt Radar"])
 
@@ -100,3 +107,42 @@ async def budget_settings(req: BudgetSettingsRequest):
 @router.post("/rescan", response_model=list[StagedFile])
 async def rescan():
     return await debt_scorer.score_staged_files()
+
+
+# ═══════════════════════════════════════════════════════════════════
+# ██  ENHANCED PRE-COMMIT SCORER + ARCHITECTURAL DRIFT MONITOR
+# ═══════════════════════════════════════════════════════════════════
+
+@router.get("/pre-commit-scans", response_model=list[PreCommitScan])
+async def pre_commit_scans():
+    return PRE_COMMIT_SCANS
+
+
+@router.get("/sprint-debt-projections", response_model=list[SprintDebtProjection])
+async def sprint_debt_projections():
+    return SPRINT_DEBT_PROJECTIONS
+
+
+@router.get("/coupling-drift", response_model=ModuleCouplingDrift)
+async def coupling_drift():
+    return MODULE_COUPLING_DRIFT
+
+
+@router.get("/boundary-violations", response_model=list[ServiceBoundaryViolation])
+async def boundary_violations():
+    return SERVICE_BOUNDARY_VIOLATIONS
+
+
+@router.get("/monocultures", response_model=list[GenerativeMonoculture])
+async def monocultures():
+    return GENERATIVE_MONOCULTURES
+
+
+@router.get("/architectural-health", response_model=ArchitecturalHealthScore)
+async def architectural_health():
+    return ARCHITECTURAL_HEALTH_SCORE
+
+
+@router.get("/arch-drift-summary", response_model=ArchDriftSummary)
+async def arch_drift_summary():
+    return compute_arch_drift_summary()

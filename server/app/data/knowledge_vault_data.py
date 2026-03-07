@@ -6,6 +6,9 @@ from app.models.knowledge_vault import (
     OnboardingQuery, KnowledgeDecayItem, InterviewSession,
     KnowledgeTransferEntry, UndocumentedRegion, OnboardingInsight,
     DecisionChainLink,
+    ExtractionSessionMsg, ContextualExtractionSession, DecisionNode,
+    ConstraintAlert, KnowledgeDecayEntry, KnowledgeAssetValuation,
+    MortalityTimelineEntry, MortalityTimeline, DepartureExposure,
 )
 
 NODES: list[KnowledgeNode] = [
@@ -464,20 +467,476 @@ DECISION_CHAINS: list[DecisionChainLink] = [
 ]
 
 
+# ═══════════════════════════════════════════════════════════════
+# ██  CONTEXTUAL EXTRACTION SESSION
+# ═══════════════════════════════════════════════════════════════
+
+EXTRACTION_SESSION = ContextualExtractionSession(
+    id="exs-001",
+    target_dev="@senior.dev",
+    commits_analysed=847,
+    bus_factor_modules=6,
+    trigger_file="payments/core/transaction_engine.py",
+    trigger_ownership_pct=89,
+    status="active",
+    messages=[
+        ExtractionSessionMsg(
+            role="bot",
+            text="You rewrote the retry logic in transaction_engine.py in October — commit a4f2b1. The previous implementation used exponential backoff. You replaced it with a fixed-window approach with tiered priority. What drove that specific change?",
+        ),
+        ExtractionSessionMsg(
+            role="dev",
+            text="The exponential backoff was causing thundering herd problems during gateway outages. We'd have 400+ requests all retrying simultaneously after identical backoff periods.",
+            decision_logged=True,
+        ),
+        ExtractionSessionMsg(
+            role="bot",
+            text="Was jitter-with-exponential evaluated as an alternative?",
+        ),
+        ExtractionSessionMsg(
+            role="dev",
+            text="Yes. Jitter solved the thundering herd but introduced unpredictable variance on Tier 1 SLA — we have a hard 200ms p99 requirement that jitter violated during load spikes.",
+            decision_logged=True,
+        ),
+        ExtractionSessionMsg(
+            role="bot",
+            text="So the tiered priority structure in lines 441–478 was directly derived from that SLA constraint?",
+        ),
+        ExtractionSessionMsg(
+            role="dev",
+            text="Exactly. And that constraint needs to be re-evaluated before anyone changes the retry window — it's not obvious from the code alone.",
+            constraint_logged=True,
+        ),
+        ExtractionSessionMsg(
+            role="bot",
+            text="I've logged that as a Decision Constraint — mandatory re-evaluation trigger on any edit to lines 441–478. One more: line 203 references a 'Stripe webhook race.' What was the incident behind that?",
+        ),
+        ExtractionSessionMsg(
+            role="dev",
+            text="In August we had concurrent webhook deliveries that triggered duplicate refunds. The mutex on line 203 was the fix — it uses a Redis distributed lock with a 30-second TTL scoped to the webhook idempotency key.",
+            decision_logged=True,
+        ),
+    ],
+    decisions_captured=3,
+    constraints_captured=1,
+)
+
+# ═══════════════════════════════════════════════════════════════
+# ██  DECISION NODES
+# ═══════════════════════════════════════════════════════════════
+
+DECISION_NODES: list[DecisionNode] = [
+    DecisionNode(
+        id="ret-2023-10",
+        decision="Fixed-window retry with tiered priority",
+        context="Thundering herd at 400+ concurrent requests during payment gateway outages",
+        alternatives_rejected=[
+            {"name": "Exponential backoff", "reason": "Thundering herd — identical retry windows"},
+            {"name": "Jitter + exponential", "reason": "Tier 1 SLA variance — 200ms p99 violated during load spikes"},
+        ],
+        constraint_type="hard",
+        constraint_detail="Tier 1 SLA = 200ms p99. MUST be re-evaluated before any retry window change.",
+        constraint_re_eval_trigger="Any edit to lines 441–478 of transaction_engine.py",
+        captured_date="Oct 14, 2025",
+        source_dev="@senior.dev",
+        source_type="interview",
+        code_regions=[
+            {"file": "payments/core/transaction_engine.py", "lines": "188–278"},
+            {"file": "payments/core/transaction_engine.py", "lines": "441–478"},
+            {"file": "payments/config/retry_config.py", "lines": "12–34"},
+        ],
+        status="active",
+    ),
+    DecisionNode(
+        id="wh-2023-08",
+        decision="Redis distributed lock for webhook idempotency",
+        context="Concurrent Stripe webhook deliveries caused duplicate refunds in August 2023",
+        alternatives_rejected=[
+            {"name": "Database advisory lock", "reason": "30ms latency unacceptable in webhook path"},
+            {"name": "Application-level dedup", "reason": "Race condition window too large with multi-pod deployment"},
+        ],
+        constraint_type="hard",
+        constraint_detail="30-second TTL on distributed lock — changing TTL requires load testing under concurrent webhook storm.",
+        constraint_re_eval_trigger="Any edit to webhook mutex logic (line 203+)",
+        captured_date="Oct 14, 2025",
+        source_dev="@senior.dev",
+        source_type="interview",
+        code_regions=[
+            {"file": "payments/core/transaction_engine.py", "lines": "198–225"},
+        ],
+        status="active",
+    ),
+    DecisionNode(
+        id="auth-2023-03",
+        decision="JWT with 15-minute TTL + refresh token rotation",
+        context="Horizontal scaling across 4 app servers required stateless auth — cookie sessions would need shared store",
+        alternatives_rejected=[
+            {"name": "Cookie sessions + Redis", "reason": "40ms latency per request for session lookup"},
+            {"name": "OAuth2 opaque tokens", "reason": "Requires centralized token validation service"},
+        ],
+        constraint_type="soft",
+        constraint_detail="15-minute TTL is a security/UX trade-off. Extending TTL requires security review.",
+        constraint_re_eval_trigger="Any change to JWT expiry or refresh token rotation",
+        captured_date="Feb 15, 2026",
+        source_dev="Raj Kumar",
+        source_type="interview",
+        code_regions=[
+            {"file": "src/auth/jwt.ts", "lines": "1–120"},
+            {"file": "src/auth/middleware.ts", "lines": "45–89"},
+        ],
+        status="active",
+    ),
+    DecisionNode(
+        id="search-2023-09",
+        decision="Self-hosted Elasticsearch on existing k8s cluster",
+        context="2M+ monthly searches — Algolia per-search pricing ($4,200/mo) vs near-zero marginal cost on existing infra",
+        alternatives_rejected=[
+            {"name": "Algolia", "reason": "$4,200/mo at current volume — 50x more expensive"},
+            {"name": "Typesense", "reason": "Less mature ecosystem, fewer integrations"},
+            {"name": "PostgreSQL FTS", "reason": "Poor performance beyond 500K documents"},
+        ],
+        constraint_type="soft",
+        constraint_detail="~4h/month maintenance overhead accepted as trade-off. If volume exceeds 10M searches/mo, revisit managed service.",
+        constraint_re_eval_trigger="Search volume crossing 10M/month threshold",
+        captured_date="Feb 15, 2026",
+        source_dev="Raj Kumar",
+        source_type="interview",
+        code_regions=[
+            {"file": "src/search/indexer.ts", "lines": "1–180"},
+            {"file": "src/search/query.ts", "lines": "1–290"},
+        ],
+        status="active",
+    ),
+]
+
+# ═══════════════════════════════════════════════════════════════
+# ██  CONSTRAINT ALERTS
+# ═══════════════════════════════════════════════════════════════
+
+CONSTRAINT_ALERTS: list[ConstraintAlert] = [
+    ConstraintAlert(
+        id="ca-001",
+        decision_node_id="ret-2023-10",
+        pr_number=2847,
+        pr_author="@junior.dev",
+        file_modified="payments/core/transaction_engine.py",
+        lines_modified="441–478",
+        constraint_violated="Tier 1 SLA = 200ms p99 — any retry window change requires re-evaluation",
+        severity="critical",
+        auto_comment_posted=True,
+        date="2026-03-05",
+        resolution="pending",
+    ),
+    ConstraintAlert(
+        id="ca-002",
+        decision_node_id="wh-2023-08",
+        pr_number=2851,
+        pr_author="@mid.dev",
+        file_modified="payments/core/transaction_engine.py",
+        lines_modified="203–210",
+        constraint_violated="Redis distributed lock TTL — changing requires load testing under webhook storm",
+        severity="warning",
+        auto_comment_posted=True,
+        date="2026-03-06",
+        resolution="acknowledged",
+    ),
+    ConstraintAlert(
+        id="ca-003",
+        decision_node_id="auth-2023-03",
+        pr_number=2860,
+        pr_author="@junior.dev",
+        file_modified="src/auth/jwt.ts",
+        lines_modified="85–92",
+        constraint_violated="JWT TTL change requires security review — 15-min TTL is security/UX trade-off",
+        severity="warning",
+        auto_comment_posted=True,
+        date="2026-03-07",
+        resolution="pending",
+    ),
+]
+
+# ═══════════════════════════════════════════════════════════════
+# ██  KNOWLEDGE DECAY SCORES (KDS)
+# ═══════════════════════════════════════════════════════════════
+
+KNOWLEDGE_DECAY_SCORES: list[KnowledgeDecayEntry] = [
+    KnowledgeDecayEntry(
+        code_region="payments/core/transaction_engine.py",
+        primary_holder="@senior.dev",
+        ownership_pct=89,
+        decision_complexity="high",
+        months_since_decision=28,
+        months_since_last_touch=7,
+        kds_at_decision=100, kds_6mo=82, kds_12mo=61, kds_18mo=44,
+        kds_current=31,
+        kds_projected_36mo=19,
+        critical_threshold_date="Aug 2026",
+        months_to_critical=5,
+    ),
+    KnowledgeDecayEntry(
+        code_region="src/auth/jwt.ts + middleware.ts",
+        primary_holder="Raj Kumar",
+        ownership_pct=92,
+        decision_complexity="high",
+        months_since_decision=36,
+        months_since_last_touch=3,
+        kds_at_decision=100, kds_6mo=85, kds_12mo=68, kds_18mo=50,
+        kds_current=26,
+        kds_projected_36mo=12,
+        critical_threshold_date="May 2026",
+        months_to_critical=2,
+    ),
+    KnowledgeDecayEntry(
+        code_region="infra/deploy_orchestrator.py",
+        primary_holder="@senior.dev",
+        ownership_pct=78,
+        decision_complexity="high",
+        months_since_decision=30,
+        months_since_last_touch=9,
+        kds_at_decision=100, kds_6mo=80, kds_12mo=58, kds_18mo=41,
+        kds_current=29,
+        kds_projected_36mo=16,
+        critical_threshold_date="Jun 2026",
+        months_to_critical=3,
+    ),
+    KnowledgeDecayEntry(
+        code_region="src/payments/stripe.ts + webhook.ts",
+        primary_holder="Priya Singh",
+        ownership_pct=68,
+        decision_complexity="medium",
+        months_since_decision=20,
+        months_since_last_touch=2,
+        kds_at_decision=100, kds_6mo=88, kds_12mo=72, kds_18mo=58,
+        kds_current=54,
+        kds_projected_36mo=32,
+        critical_threshold_date="Feb 2027",
+        months_to_critical=11,
+    ),
+    KnowledgeDecayEntry(
+        code_region="src/search/indexer.ts + query.ts",
+        primary_holder="Raj Kumar",
+        ownership_pct=85,
+        decision_complexity="medium",
+        months_since_decision=18,
+        months_since_last_touch=5,
+        kds_at_decision=100, kds_6mo=86, kds_12mo=70, kds_18mo=55,
+        kds_current=61,
+        kds_projected_36mo=38,
+        critical_threshold_date="May 2027",
+        months_to_critical=14,
+    ),
+    KnowledgeDecayEntry(
+        code_region="src/reports/generator.ts",
+        primary_holder="Meera Joshi",
+        ownership_pct=95,
+        decision_complexity="high",
+        months_since_decision=22,
+        months_since_last_touch=12,
+        kds_at_decision=100, kds_6mo=78, kds_12mo=55, kds_18mo=36,
+        kds_current=24,
+        kds_projected_36mo=10,
+        critical_threshold_date="Apr 2026",
+        months_to_critical=1,
+    ),
+    KnowledgeDecayEntry(
+        code_region="src/users/roles.ts",
+        primary_holder="Raj Kumar",
+        ownership_pct=45,
+        decision_complexity="low",
+        months_since_decision=12,
+        months_since_last_touch=1,
+        kds_at_decision=100, kds_6mo=92, kds_12mo=82, kds_18mo=74,
+        kds_current=93,
+        kds_projected_36mo=68,
+        critical_threshold_date="N/A",
+        months_to_critical=99,
+    ),
+]
+
+# ═══════════════════════════════════════════════════════════════
+# ██  KNOWLEDGE ASSET VALUATIONS (KAV)
+# ═══════════════════════════════════════════════════════════════
+
+KNOWLEDGE_ASSET_VALUATIONS: list[KnowledgeAssetValuation] = [
+    KnowledgeAssetValuation(
+        code_region="payments/core/transaction_engine.py",
+        module_label="Payment Retry Engine",
+        reconstruction_hours=40, hourly_rate=250, reconstruction_cost=10000,
+        expected_incidents=2.3, avg_incident_cost=18000, sla_penalty_exposure=12000,
+        total_kav=63400,
+        current_kds=31,
+        recoverable_value=19654,
+        already_irrecoverable=43746,
+        extraction_cost=625, extraction_hours=2.5,
+        extraction_roi=31,
+    ),
+    KnowledgeAssetValuation(
+        code_region="src/auth/jwt.ts + middleware.ts",
+        module_label="Auth Token Validator",
+        reconstruction_hours=24, hourly_rate=250, reconstruction_cost=6000,
+        expected_incidents=3.1, avg_incident_cost=8500, sla_penalty_exposure=8850,
+        total_kav=41200,
+        current_kds=26,
+        recoverable_value=10712,
+        already_irrecoverable=30488,
+        extraction_cost=500, extraction_hours=2.0,
+        extraction_roi=21,
+    ),
+    KnowledgeAssetValuation(
+        code_region="infra/deploy_orchestrator.py",
+        module_label="Deploy Orchestrator",
+        reconstruction_hours=56, hourly_rate=250, reconstruction_cost=14000,
+        expected_incidents=1.8, avg_incident_cost=28000, sla_penalty_exposure=25300,
+        total_kav=89700,
+        current_kds=29,
+        recoverable_value=26013,
+        already_irrecoverable=63687,
+        extraction_cost=750, extraction_hours=3.0,
+        extraction_roi=34,
+    ),
+    KnowledgeAssetValuation(
+        code_region="src/payments/stripe.ts + webhook.ts",
+        module_label="Stripe Integration",
+        reconstruction_hours=18, hourly_rate=250, reconstruction_cost=4500,
+        expected_incidents=1.4, avg_incident_cost=12000, sla_penalty_exposure=7100,
+        total_kav=28400,
+        current_kds=54,
+        recoverable_value=15336,
+        already_irrecoverable=13064,
+        extraction_cost=375, extraction_hours=1.5,
+        extraction_roi=40,
+    ),
+    KnowledgeAssetValuation(
+        code_region="src/search/indexer.ts + query.ts",
+        module_label="Search & Ranking",
+        reconstruction_hours=14, hourly_rate=250, reconstruction_cost=3500,
+        expected_incidents=0.8, avg_incident_cost=6000, sla_penalty_exposure=11500,
+        total_kav=19800,
+        current_kds=61,
+        recoverable_value=12078,
+        already_irrecoverable=7722,
+        extraction_cost=375, extraction_hours=1.5,
+        extraction_roi=32,
+    ),
+    KnowledgeAssetValuation(
+        code_region="src/reports/generator.ts",
+        module_label="Report Generator",
+        reconstruction_hours=32, hourly_rate=250, reconstruction_cost=8000,
+        expected_incidents=1.6, avg_incident_cost=9500, sla_penalty_exposure=6200,
+        total_kav=29400,
+        current_kds=24,
+        recoverable_value=7056,
+        already_irrecoverable=22344,
+        extraction_cost=500, extraction_hours=2.0,
+        extraction_roi=14,
+    ),
+    KnowledgeAssetValuation(
+        code_region="src/users/roles.ts",
+        module_label="RBAC System",
+        reconstruction_hours=4, hourly_rate=250, reconstruction_cost=1000,
+        expected_incidents=0.2, avg_incident_cost=3000, sla_penalty_exposure=500,
+        total_kav=2100,
+        current_kds=93,
+        recoverable_value=1953,
+        already_irrecoverable=147,
+        extraction_cost=125, extraction_hours=0.5,
+        extraction_roi=15,
+    ),
+]
+
+# ═══════════════════════════════════════════════════════════════
+# ██  MORTALITY TIMELINE
+# ═══════════════════════════════════════════════════════════════
+
+MORTALITY_TIMELINE = MortalityTimeline(
+    org="Platform Engineering",
+    quarter="Q1 2026",
+    entries=[
+        MortalityTimelineEntry(
+            priority="urgent", code_region="payments/retry_engine",
+            module_label="Payment Retry Engine", kds=31, kav=63400,
+            expiry_date="Aug 2026", holder="@senior.dev",
+        ),
+        MortalityTimelineEntry(
+            priority="urgent", code_region="auth/token_validator",
+            module_label="Auth Token Validator", kds=26, kav=41200,
+            expiry_date="May 2026", holder="Raj Kumar",
+        ),
+        MortalityTimelineEntry(
+            priority="urgent", code_region="infra/deploy_orchestrator",
+            module_label="Deploy Orchestrator", kds=29, kav=89700,
+            expiry_date="Jun 2026", holder="@senior.dev",
+        ),
+        MortalityTimelineEntry(
+            priority="high", code_region="billing/invoice_calculator",
+            module_label="Stripe Integration", kds=54, kav=28400,
+            expiry_date="Feb 2027", holder="Priya Singh",
+        ),
+        MortalityTimelineEntry(
+            priority="high", code_region="api/rate_limiter",
+            module_label="Search & Ranking", kds=61, kav=19800,
+            expiry_date="May 2027", holder="Raj Kumar",
+        ),
+        MortalityTimelineEntry(
+            priority="urgent", code_region="reports/generator",
+            module_label="Report Generator", kds=24, kav=29400,
+            expiry_date="Apr 2026", holder="Meera Joshi",
+        ),
+        MortalityTimelineEntry(
+            priority="low", code_region="utils/string_formatter",
+            module_label="RBAC System", kds=93, kav=2100,
+            expiry_date="N/A", holder="Raj Kumar",
+        ),
+    ],
+    total_at_imminent_risk=223700,
+    recommended_sessions=4,
+    recommended_hours=9.5,
+    preservation_roi=93,
+    extraction_cost=2375,
+)
+
+# ═══════════════════════════════════════════════════════════════
+# ██  DEPARTURE EXPOSURE
+# ═══════════════════════════════════════════════════════════════
+
+DEPARTURE_EXPOSURE = DepartureExposure(
+    dev="@senior.dev",
+    signal="LinkedIn profile updated — new headline and skills",
+    signal_date="2026-03-03",
+    modules_affected=14,
+    combined_kav=387000,
+    recoverable_with_extraction=184200,
+    extraction_sessions=8,
+    extraction_hours=16,
+    irrecoverable_immediately=163400,
+    already_documented=39400,
+    action_window_days=14,
+    first_critical_expiry="auth/token_validator (May 2026)",
+    extraction_cost=4000,
+    preservation_roi=46,
+)
+
+
 def get_full_dashboard():
-    from app.models.knowledge_vault import KnowledgeVaultDashboard
-    return KnowledgeVaultDashboard(
-        nodes=NODES,
-        interview_history=INTERVIEW_HISTORY,
-        decisions=DECISIONS,
-        risk_score=RISK_SCORE,
-        recent_extractions=EXTRACTIONS,
-        onboarding_queries=ONBOARDING_QUERIES,
-        archaeology_results=ARCHAEOLOGY_RESULTS,
-        decay_items=DECAY_ITEMS,
-        interview_sessions=INTERVIEW_SESSIONS,
-        transfer_matrix=TRANSFER_MATRIX,
-        undocumented_regions=UNDOCUMENTED_REGIONS,
-        onboarding_insights=ONBOARDING_INSIGHTS,
-        decision_chains=DECISION_CHAINS,
-    )
+    return {
+        "nodes": [n.model_dump() for n in NODES],
+        "interview_history": [m.model_dump() for m in INTERVIEW_HISTORY],
+        "decisions": [d.model_dump() for d in DECISIONS],
+        "risk_score": RISK_SCORE.model_dump(),
+        "recent_extractions": [e.model_dump() for e in EXTRACTIONS],
+        "onboarding_queries": [q.model_dump() for q in ONBOARDING_QUERIES],
+        "archaeology_results": [a.model_dump() for a in ARCHAEOLOGY_RESULTS],
+        "decay_items": [d.model_dump() for d in DECAY_ITEMS],
+        "interview_sessions": [s.model_dump() for s in INTERVIEW_SESSIONS],
+        "transfer_matrix": [t.model_dump() for t in TRANSFER_MATRIX],
+        "undocumented_regions": [u.model_dump() for u in UNDOCUMENTED_REGIONS],
+        "onboarding_insights": [o.model_dump() for o in ONBOARDING_INSIGHTS],
+        "decision_chains": [c.model_dump() for c in DECISION_CHAINS],
+        "extraction_session": EXTRACTION_SESSION.model_dump(),
+        "decision_nodes": [dn.model_dump() for dn in DECISION_NODES],
+        "constraint_alerts": [ca.model_dump() for ca in CONSTRAINT_ALERTS],
+        "knowledge_decay_scores": [k.model_dump() for k in KNOWLEDGE_DECAY_SCORES],
+        "asset_valuations": [a.model_dump() for a in KNOWLEDGE_ASSET_VALUATIONS],
+        "mortality_timeline": MORTALITY_TIMELINE.model_dump(),
+        "departure_exposure": DEPARTURE_EXPOSURE.model_dump(),
+    }

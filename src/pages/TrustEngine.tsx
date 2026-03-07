@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react'
-import { ShieldCheck, AlertCircle, Download, Eye, FileWarning, TrendingUp, TrendingDown, Users, Calculator, BarChart3 } from 'lucide-react'
+import { ShieldCheck, AlertCircle, Download, Eye, FileWarning, TrendingUp, TrendingDown, Users, Calculator, BarChart3, Shield, Lock, CheckCircle, XCircle, Clock, Layers } from 'lucide-react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
+    PieChart, Pie, Cell,
 } from 'recharts'
 import { trustEngineApi } from '../api/client'
-import type { TEDeveloperProfile } from '../api/client'
+import type {
+    TEDeveloperProfile, TEPerSuggestionTrustScore, TEVTEProtocol,
+    TECalibrationReport, TEVTESummary,
+} from '../api/client'
 
 export default function TrustEngine() {
     const [activeIdx, setActiveIdx] = useState(1)
@@ -44,6 +48,14 @@ export default function TrustEngine() {
     } | null>(null)
     const [calcLoading, setCalcLoading] = useState(false)
 
+    // New feature state
+    const [perSuggestionScores, setPerSuggestionScores] = useState<TEPerSuggestionTrustScore[]>([])
+    const [vteProtocols, setVteProtocols] = useState<TEVTEProtocol[]>([])
+    const [calibrationReport, setCalibrationReport] = useState<TECalibrationReport | null>(null)
+    const [vteSummary, setVteSummary] = useState<TEVTESummary | null>(null)
+    const [activeScoreIdx, setActiveScoreIdx] = useState(0)
+    const [expandedVteId, setExpandedVteId] = useState<string | null>(null)
+
     useEffect(() => {
         trustEngineApi.dashboard().then((d) => {
             setSuggestions(d.suggestions.map((s) => ({
@@ -79,8 +91,12 @@ export default function TrustEngine() {
             })
             setDevProfiles(d.developer_profiles)
             if (d.developer_profiles.length > 0) setSelectedDev(d.developer_profiles[0].name)
+            if (d.per_suggestion_scores) setPerSuggestionScores(d.per_suggestion_scores)
+            if (d.vte_protocols) setVteProtocols(d.vte_protocols)
+            if (d.calibration_report) setCalibrationReport(d.calibration_report)
             setLoading(false)
         }).catch((err) => { console.error('TrustEngine fetch error:', err); setLoading(false) })
+        trustEngineApi.vteSummary().then(setVteSummary).catch(() => {})
     }, [])
 
     if (loading) {
@@ -811,6 +827,453 @@ export default function TrustEngine() {
                     <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
                         Developers accept <span className="text-cyan-400 font-semibold">21–24%</span> of AI suggestions, but no tool tells them <em>why</em> to trust or distrust each one.
                         Per-suggestion trust scoring with <span className="text-purple-400 font-semibold">context-aware confidence</span> and <span className="text-emerald-400 font-semibold">historical accuracy by task type</span> closes this gap — turning blind acceptance into informed decisions.
+                    </p>
+                </div>
+            </div>
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  9-SIGNAL PER-SUGGESTION TRUST SCORER + EXPLAINABILITY
+            ═══════════════════════════════════════════════════════════════════ */}
+            {perSuggestionScores.length > 0 && (
+                <div className="glass-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Shield size={16} style={{ color: '#00D4FF' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">🔬 9-Signal Per-Suggestion Trust Scorer</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    Before accept or reject — 9 signals computed at suggestion display time with full explainability
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {perSuggestionScores.map((pss, i) => {
+                                const pssColor = pss.level === 'green' ? '#10B981' : pss.level === 'amber' ? '#F59E0B' : '#EF4444'
+                                return (
+                                    <button key={pss.suggestion_id}
+                                        className="text-xs px-3 py-1.5 rounded-lg font-medium transition-all"
+                                        style={{
+                                            background: activeScoreIdx === i ? `${pssColor}15` : 'rgba(30,45,74,0.5)',
+                                            color: activeScoreIdx === i ? pssColor : '#94A3B8',
+                                            border: `1px solid ${activeScoreIdx === i ? `${pssColor}33` : '#1E2D4A'}`,
+                                        }}
+                                        onClick={() => setActiveScoreIdx(i)}
+                                    >
+                                        {pss.suggestion_id} ({pss.trust_score})
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {(() => {
+                        const pss = perSuggestionScores[activeScoreIdx]
+                        if (!pss) return null
+                        const scoreColor = pss.level === 'green' ? '#10B981' : pss.level === 'amber' ? '#F59E0B' : '#EF4444'
+                        const vte = vteProtocols.find(v => v.suggestion_id === pss.suggestion_id)
+                        return (
+                            <div>
+                                {/* Score header + code snippet */}
+                                <div className="grid grid-cols-3 gap-4 mb-4">
+                                    <div className="col-span-2">
+                                        <div className="flex items-center gap-2 mb-2 text-xs">
+                                            <span style={{ color: '#94A3B8' }}>@{pss.developer}</span>
+                                            <span className="font-mono" style={{ color: '#00D4FF' }}>{pss.task_type}</span>
+                                            <span style={{ color: '#64748B' }}>{new Date(pss.timestamp).toLocaleString()}</span>
+                                        </div>
+                                        <pre className="text-xs p-3 rounded-lg overflow-x-auto font-mono" style={{ background: 'rgba(30,45,74,0.4)', border: '1px solid #1E2D4A', color: '#E2E8F0', whiteSpace: 'pre-wrap' }}>
+                                            {pss.code_snippet}
+                                        </pre>
+                                    </div>
+                                    <div className="flex flex-col items-center justify-center">
+                                        <div className="w-24 h-24 rounded-full flex flex-col items-center justify-center"
+                                            style={{ background: `conic-gradient(${scoreColor} 0% ${pss.trust_score}%, #1E2D4A ${pss.trust_score}% 100%)`, padding: 4, boxShadow: `0 0 25px ${scoreColor}33` }}>
+                                            <div className="w-full h-full rounded-full flex flex-col items-center justify-center" style={{ background: '#0F1629' }}>
+                                                <span className="text-2xl font-black" style={{ color: scoreColor }}>{pss.trust_score}</span>
+                                                <span className="text-xs" style={{ color: '#94A3B8' }}>trust</span>
+                                            </div>
+                                        </div>
+                                        <span className="text-xs font-bold mt-2 px-2 py-0.5 rounded-full" style={{ background: `${scoreColor}15`, color: scoreColor }}>
+                                            {pss.level === 'green' ? '✅' : pss.level === 'amber' ? '⚠️' : '🔴'} {pss.recommendation}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* 9-Signal Breakdown */}
+                                <div className="mb-4">
+                                    <p className="text-xs font-semibold text-white mb-2">📊 9-Signal Breakdown</p>
+                                    <div className="space-y-1.5">
+                                        {pss.signals.map((sig) => {
+                                            const sigColor = sig.score_contribution > 15 ? '#EF4444' : sig.score_contribution > 8 ? '#F59E0B' : sig.score_contribution > 0 ? '#94A3B8' : '#10B981'
+                                            return (
+                                                <div key={sig.signal} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid rgba(30,45,74,0.5)' }}>
+                                                    <div className="flex-1 min-w-0">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-xs font-medium text-white">{sig.signal}</span>
+                                                            <span className="text-xs" style={{ color: '#00D4FF' }}>{sig.value}</span>
+                                                        </div>
+                                                        <p className="text-xs mt-0.5 truncate" style={{ color: '#64748B', fontSize: 10 }}>{sig.detail}</p>
+                                                    </div>
+                                                    <div className="w-20 shrink-0">
+                                                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#1E2D4A' }}>
+                                                            <div className="h-full rounded-full" style={{ width: `${Math.min((sig.score_contribution / 25) * 100, 100)}%`, background: sigColor }} />
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-xs font-bold w-8 text-right shrink-0" style={{ color: sigColor }}>
+                                                        {sig.score_contribution > 0 ? '+' : ''}{sig.score_contribution.toFixed(1)}
+                                                    </span>
+                                                    <span className="text-xs w-8 text-right shrink-0" style={{ color: '#64748B' }}>{(sig.weight * 100).toFixed(0)}%</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Explainability Panel */}
+                                <div className="grid grid-cols-2 gap-4 mb-4">
+                                    {/* Why this score is low */}
+                                    {pss.why_low.length > 0 && (
+                                        <div className="p-4 rounded-xl" style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                                            <p className="text-xs font-bold mb-2" style={{ color: '#EF4444' }}>❌ Why this score is low</p>
+                                            <div className="space-y-2">
+                                                {pss.why_low.map((item, j) => (
+                                                    <div key={j} className="flex items-start gap-2">
+                                                        <span className="text-xs mt-0.5" style={{ color: item.severity === 'critical' ? '#EF4444' : '#F59E0B' }}>→</span>
+                                                        <p className="text-xs" style={{ color: '#94A3B8' }}>{item.text}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* What to check */}
+                                    <div className="p-4 rounded-xl" style={{ background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.15)' }}>
+                                        <p className="text-xs font-bold mb-2" style={{ color: '#10B981' }}>✅ What to check before accepting</p>
+                                        <div className="space-y-2">
+                                            {pss.what_to_check.map((item, j) => (
+                                                <div key={j} className="flex items-start gap-2">
+                                                    <span className="text-xs mt-0.5" style={{ color: item.severity === 'critical' ? '#EF4444' : item.severity === 'high' ? '#F59E0B' : '#94A3B8' }}>→</span>
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>{item.text}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Personal + Team accuracy */}
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)' }}>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>Your accuracy for {pss.task_type}</p>
+                                        <p className="text-xl font-black" style={{ color: pss.personal_accuracy < 40 ? '#EF4444' : pss.personal_accuracy < 60 ? '#F59E0B' : '#10B981' }}>{pss.personal_accuracy}%</p>
+                                    </div>
+                                    <div className="p-3 rounded-lg text-center" style={{ background: 'rgba(0,212,255,0.06)', border: '1px solid rgba(0,212,255,0.15)' }}>
+                                        <p className="text-xs" style={{ color: '#94A3B8' }}>Team accuracy for {pss.task_type}</p>
+                                        <p className="text-xl font-black" style={{ color: pss.team_accuracy < 40 ? '#EF4444' : pss.team_accuracy < 60 ? '#F59E0B' : '#10B981' }}>{pss.team_accuracy}%</p>
+                                    </div>
+                                </div>
+
+                                {/* ═══ Inline VTE Protocol ═══ */}
+                                {vte && (
+                                    <div className="mt-4 p-4 rounded-xl" style={{ background: 'rgba(0,212,255,0.03)', border: '1px solid rgba(0,212,255,0.15)' }}>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle size={14} style={{ color: '#00D4FF' }} />
+                                                <p className="text-xs font-bold text-white">VERIFICATION PROTOCOL</p>
+                                                <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,212,255,0.12)', color: '#00D4FF' }}>
+                                                    Trust: {vte.trust_score}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Clock size={12} style={{ color: '#94A3B8' }} />
+                                                <span className="text-xs font-bold" style={{ color: '#00D4FF' }}>Est. {vte.estimated_seconds} sec</span>
+                                                <button
+                                                    className="text-xs px-3 py-1 rounded-lg font-medium transition-all"
+                                                    style={{ background: expandedVteId === vte.suggestion_id ? 'rgba(0,212,255,0.15)' : 'rgba(30,45,74,0.5)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}
+                                                    onClick={() => setExpandedVteId(expandedVteId === vte.suggestion_id ? null : vte.suggestion_id)}
+                                                >
+                                                    {expandedVteId === vte.suggestion_id ? 'Collapse' : 'Expand Checks'}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Section summary row */}
+                                        <div className="grid grid-cols-4 gap-2 mb-3">
+                                            {[
+                                                { label: 'Security', icon: '🔴', count: vte.security_fast_paths.length, priority: vte.sections_order[0] },
+                                                { label: 'Symbols', icon: '🟠', count: vte.symbol_checks.filter(s => s.status !== 'verified').length, priority: vte.sections_order[1] || 'SKIPPED' },
+                                                { label: 'Logic', icon: '🟡', count: vte.boundary_tests.length, priority: vte.sections_order[2] || 'SKIPPED' },
+                                                { label: 'Architecture', icon: '🔵', count: vte.arch_probes.length, priority: vte.sections_order[3] || 'SKIPPED' },
+                                            ].map((sec) => {
+                                                const secColor = sec.priority === 'CRITICAL' ? '#EF4444' : sec.priority === 'HIGH' ? '#F59E0B' : sec.priority === 'SKIPPED' ? '#64748B' : '#00D4FF'
+                                                return (
+                                                    <div key={sec.label} className="p-2 rounded-lg text-center" style={{ background: sec.priority === 'SKIPPED' ? 'rgba(30,45,74,0.2)' : `${secColor}06`, border: `1px solid ${sec.priority === 'SKIPPED' ? '#1E2D4A' : `${secColor}22`}` }}>
+                                                        <p className="text-xs font-bold" style={{ color: secColor }}>
+                                                            {sec.icon} {sec.priority}
+                                                        </p>
+                                                        <p className="text-xs" style={{ color: '#94A3B8' }}>{sec.label}: {sec.count > 0 ? `${sec.count} check${sec.count > 1 ? 's' : ''}` : 'none'}</p>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+
+                                        {/* Expanded VTE details */}
+                                        {expandedVteId === vte.suggestion_id && (
+                                            <div className="space-y-3">
+                                                {/* Security fast-paths */}
+                                                {vte.security_fast_paths.length > 0 && (
+                                                    <div className="p-3 rounded-lg" style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                                                        <p className="text-xs font-bold mb-2" style={{ color: '#EF4444' }}>🔴 SECURITY FAST-PATH (est. 10 sec)</p>
+                                                        {vte.security_fast_paths.map((sf, j) => (
+                                                            <div key={j} className="space-y-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Lock size={11} style={{ color: '#EF4444' }} />
+                                                                    <span className="text-xs font-bold" style={{ color: '#EF4444' }}>{sf.owasp_id} — {sf.risk_label} (lines {sf.lines})</span>
+                                                                </div>
+                                                                <div className="pl-5 space-y-1">
+                                                                    <p className="text-xs font-mono" style={{ color: '#F87171' }}>Current: {sf.current_code}</p>
+                                                                    <p className="text-xs font-mono" style={{ color: '#10B981' }}>Required: {sf.required_fix}</p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
+
+                                                {/* Symbol checks */}
+                                                {vte.symbol_checks.filter(s => s.status !== 'verified').length > 0 && (
+                                                    <div className="p-3 rounded-lg" style={{ background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)' }}>
+                                                        <p className="text-xs font-bold mb-2" style={{ color: '#F59E0B' }}>🟠 SYMBOL VERIFICATION (est. 15 sec)</p>
+                                                        <div className="space-y-1.5">
+                                                            {vte.symbol_checks.map((sc, j) => (
+                                                                <div key={j} className="flex items-center gap-2 text-xs">
+                                                                    {sc.status === 'verified'
+                                                                        ? <CheckCircle size={11} style={{ color: '#10B981' }} />
+                                                                        : <XCircle size={11} style={{ color: '#F59E0B' }} />}
+                                                                    <span className="font-mono" style={{ color: '#E2E8F0' }}>{sc.symbol}</span>
+                                                                    <span style={{ color: '#64748B' }}>— {sc.location}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <p className="text-xs mt-2" style={{ color: '#F59E0B' }}>→ If any symbol is missing: reject this suggestion</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Boundary tests */}
+                                                {vte.boundary_tests.length > 0 && (
+                                                    <div className="p-3 rounded-lg" style={{ background: 'rgba(0,212,255,0.04)', border: '1px solid rgba(0,212,255,0.15)' }}>
+                                                        <p className="text-xs font-bold mb-2" style={{ color: '#00D4FF' }}>🟡 LOGIC BOUNDARY TESTS (est. 25 sec)</p>
+                                                        <div className="space-y-1.5">
+                                                            {vte.boundary_tests.map((bt, j) => (
+                                                                <div key={j} className="flex items-start gap-2 text-xs">
+                                                                    <span className="text-white mt-0.5">☐</span>
+                                                                    <div>
+                                                                        <span className="font-mono font-medium text-white">{bt.input_desc}</span>
+                                                                        <span className="ml-2" style={{ color: '#64748B' }}>({bt.target_line})</span>
+                                                                        <p style={{ color: '#94A3B8', fontSize: 10 }}>{bt.rationale}</p>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <p className="text-xs mt-2" style={{ color: '#00D4FF' }}>→ All pass: safe to accept. Any fail: reject and note which boundary the AI missed</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Arch probes */}
+                                                {vte.arch_probes.length > 0 && (
+                                                    <div className="p-3 rounded-lg" style={{ background: 'rgba(124,58,237,0.04)', border: '1px solid rgba(124,58,237,0.15)' }}>
+                                                        <p className="text-xs font-bold mb-2" style={{ color: '#A78BFA' }}>🔵 ARCHITECTURAL PROBE (est. 20 sec)</p>
+                                                        <div className="space-y-1.5">
+                                                            {vte.arch_probes.map((ap, j) => (
+                                                                <div key={j} className="flex items-start gap-2 text-xs">
+                                                                    <span className="text-white mt-0.5">☐</span>
+                                                                    <div>
+                                                                        <p style={{ color: '#E2E8F0' }}>{ap.check}</p>
+                                                                        <span className="font-mono" style={{ color: '#64748B', fontSize: 10 }}>Target: {ap.target} · Risk: {ap.risk}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <p className="text-xs mt-2" style={{ color: '#A78BFA' }}>→ Any inconsistency: architectural conflict — reject</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* VTE action buttons */}
+                                        <div className="flex items-center gap-3 mt-3 pt-3" style={{ borderTop: '1px solid rgba(0,212,255,0.1)' }}>
+                                            <button className="text-xs px-4 py-1.5 rounded-lg font-semibold" style={{ background: 'rgba(0,212,255,0.15)', color: '#00D4FF', border: '1px solid rgba(0,212,255,0.3)' }}>
+                                                Run verification
+                                            </button>
+                                            <button className="text-xs px-4 py-1.5 rounded-lg font-semibold" style={{ background: 'rgba(245,158,11,0.1)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.2)' }}>
+                                                Skip and accept
+                                            </button>
+                                            <button className="text-xs px-4 py-1.5 rounded-lg font-semibold" style={{ background: 'rgba(239,68,68,0.1)', color: '#EF4444', border: '1px solid rgba(239,68,68,0.2)' }}>
+                                                Reject
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })()}
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  VERIFICATION TAX SUMMARY
+            ═══════════════════════════════════════════════════════════════════ */}
+            {vteSummary && (
+                <div className="glass-card p-5">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Clock size={16} style={{ color: '#10B981' }} />
+                        <div>
+                            <h3 className="text-sm font-semibold text-white">⏱️ Verification Tax Elimination — Impact Summary</h3>
+                            <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                Replacing 31-minute unstructured verification with {vteSummary.avg_vte_seconds}-second targeted proof paths
+                            </p>
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                        {[
+                            { label: 'Avg VTE Time', value: `${vteSummary.avg_vte_seconds}s`, color: '#10B981', sub: `vs. ${vteSummary.avg_unstructured_minutes}min unstructured` },
+                            { label: 'Savings Per Verification', value: `${vteSummary.savings_per_verification_minutes} min`, color: '#10B981', sub: 'per suggestion verified' },
+                            { label: 'Suggestions Scored', value: vteSummary.total_suggestions_scored, color: '#00D4FF', sub: `avg trust: ${vteSummary.avg_trust_score}` },
+                            { label: 'Need Verification', value: `${vteSummary.pct_requiring_verification}%`, color: '#F59E0B', sub: 'trust score < 50' },
+                        ].map((m) => (
+                            <div key={m.label} className="text-center p-3 rounded-xl" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                <p className="text-xs mb-1" style={{ color: '#94A3B8' }}>{m.label}</p>
+                                <p className="text-lg font-black" style={{ color: m.color }}>{m.value}</p>
+                                <p className="text-xs mt-0.5" style={{ color: '#64748B', fontSize: 10 }}>{m.sub}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ═══════════════════════════════════════════════════════════════════
+                ██  TRUST CALIBRATION REPORT
+            ═══════════════════════════════════════════════════════════════════ */}
+            {calibrationReport && (
+                <div className="glass-card p-5">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Layers size={16} style={{ color: '#7C3AED' }} />
+                            <div>
+                                <h3 className="text-sm font-semibold text-white">📋 Trust Calibration Report — {calibrationReport.team} — {calibrationReport.week_label}</h3>
+                                <p className="text-xs mt-0.5" style={{ color: '#94A3B8' }}>
+                                    Where verification behaviour is efficient vs. wasteful — the management layer
+                                </p>
+                            </div>
+                        </div>
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
+                            background: `${calibrationReport.team_calibration_score >= 75 ? '#10B981' : calibrationReport.team_calibration_score >= 50 ? '#F59E0B' : '#EF4444'}15`,
+                            color: calibrationReport.team_calibration_score >= 75 ? '#10B981' : calibrationReport.team_calibration_score >= 50 ? '#F59E0B' : '#EF4444',
+                        }}>
+                            Calibration: {calibrationReport.team_calibration_score}/100
+                        </span>
+                    </div>
+
+                    {/* Top-line KPIs */}
+                    <div className="grid grid-cols-5 gap-3 mb-4">
+                        {[
+                            { label: 'Suggestions', value: calibrationReport.suggestions_displayed, color: '#00D4FF' },
+                            { label: 'Protocols Run', value: `${calibrationReport.protocols_run} (${calibrationReport.protocol_run_pct}%)`, color: '#7C3AED' },
+                            { label: 'Avg Verify Time', value: `${calibrationReport.avg_verification_sec}s`, color: '#10B981' },
+                            { label: 'vs. Unstructured', value: `${calibrationReport.unstructured_avg_min} min`, color: '#EF4444' },
+                            { label: 'Tax Saved', value: `${calibrationReport.verification_tax_saved_hrs}h`, color: '#10B981' },
+                        ].map((m) => (
+                            <div key={m.label} className="text-center p-3 rounded-lg" style={{ background: 'rgba(30,45,74,0.25)', border: '1px solid #1E2D4A' }}>
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>{m.label}</p>
+                                <p className="text-lg font-black" style={{ color: m.color }}>{m.value}</p>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calibration Buckets — Pie + bars */}
+                    <div className="grid grid-cols-2 gap-6 mb-4">
+                        <div>
+                            <p className="text-xs font-semibold text-white mb-3">📊 Calibration Health Distribution</p>
+                            <ResponsiveContainer width="100%" height={180}>
+                                <PieChart>
+                                    <Pie
+                                        data={calibrationReport.buckets.map(b => ({ name: b.label, value: b.pct }))}
+                                        dataKey="value"
+                                        nameKey="name"
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={40}
+                                        outerRadius={70}
+                                        paddingAngle={3}
+                                    >
+                                        {calibrationReport.buckets.map((b, i) => {
+                                            const bColors = ['#10B981', '#10B981', '#F59E0B', '#EF4444']
+                                            return <Cell key={i} fill={bColors[i]} opacity={0.8} />
+                                        })}
+                                    </Pie>
+                                    <Tooltip contentStyle={{ background: '#0F1629', border: '1px solid #1E2D4A', borderRadius: 8, fontSize: 12 }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
+                        <div className="space-y-3">
+                            {calibrationReport.buckets.map((b) => {
+                                const bColor = b.status === 'green' ? '#10B981' : b.status === 'amber' ? '#F59E0B' : '#EF4444'
+                                const bIcon = b.status === 'green' ? '🟢' : b.status === 'amber' ? '🟠' : '🔴'
+                                return (
+                                    <div key={b.label}>
+                                        <div className="flex items-center justify-between text-xs mb-1">
+                                            <span style={{ color: '#94A3B8' }}>{bIcon} {b.label}</span>
+                                            <span className="font-bold" style={{ color: bColor }}>{b.pct}%</span>
+                                        </div>
+                                        <div className="progress-bar"><div className="progress-fill" style={{ width: `${b.pct}%`, background: `linear-gradient(90deg, ${bColor}88, ${bColor})` }} /></div>
+                                        <p className="text-xs mt-0.5" style={{ color: '#64748B', fontSize: 10 }}>{b.description}</p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Calibration Gaps */}
+                    <div className="space-y-3">
+                        <p className="text-xs font-semibold text-white">🎯 Calibration Gaps & Recommendations</p>
+
+                        {/* Primary gap */}
+                        <div className="p-3 rounded-xl" style={{ background: 'rgba(239,68,68,0.04)', border: '1px solid rgba(239,68,68,0.15)' }}>
+                            <div className="flex items-center gap-2 mb-1">
+                                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(239,68,68,0.15)', color: '#EF4444' }}>Primary Gap</span>
+                                <span className="text-xs font-bold text-white">{calibrationReport.primary_gap.task_type}</span>
+                                <span className="text-xs" style={{ color: '#F59E0B' }}>{calibrationReport.primary_gap.gap_type}: {calibrationReport.primary_gap.rate}%</span>
+                            </div>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>💡 {calibrationReport.primary_gap.recommendation}</p>
+                        </div>
+
+                        {/* Secondary gaps */}
+                        {calibrationReport.secondary_gaps.map((gap, i) => (
+                            <div key={i} className="p-3 rounded-xl" style={{ background: 'rgba(245,158,11,0.04)', border: '1px solid rgba(245,158,11,0.12)' }}>
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(245,158,11,0.12)', color: '#F59E0B' }}>Secondary</span>
+                                    <span className="text-xs font-bold text-white">{gap.task_type}</span>
+                                    <span className="text-xs" style={{ color: '#F59E0B' }}>{gap.gap_type}: {gap.rate}%</span>
+                                </div>
+                                <p className="text-xs" style={{ color: '#94A3B8' }}>💡 {gap.recommendation}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* Enterprise VTE Insight */}
+            <div
+                className="flex items-center gap-4 px-5 py-4 rounded-xl"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(0,212,255,0.06))',
+                    border: '1px solid rgba(124,58,237,0.18)',
+                }}
+            >
+                <div className="text-2xl">💎</div>
+                <div>
+                    <p className="text-sm font-semibold text-white">Enterprise Trust Intelligence</p>
+                    <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                        Every AI tool shows your developers what to accept. We are the <span className="text-cyan-400 font-semibold">only platform</span> that tells them exactly which suggestions to verify, gives them the <span className="text-purple-400 font-semibold">minimum proof needed to decide in under 60 seconds</span>, and tracks whether their trust judgements are getting <span className="text-emerald-400 font-semibold">sharper or more expensive</span> over time.
+                        {calibrationReport && <> This week: <span className="text-emerald-400 font-bold">{calibrationReport.verification_tax_saved_hrs}h saved</span>. Calibration: <span className="text-cyan-400 font-bold">{calibrationReport.team_calibration_score}/100</span>. Avg verify: <span className="text-emerald-400 font-bold">{calibrationReport.avg_verification_sec}s</span> vs. <span className="text-red-400 font-bold">{calibrationReport.unstructured_avg_min}min</span> unstructured.</>}
                     </p>
                 </div>
             </div>

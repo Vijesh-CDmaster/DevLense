@@ -3,9 +3,14 @@ from app.data.dev_profiles_data import (
     get_full_dashboard, DEVELOPERS, BENEFIT_CURVE, IMPACT_TIMELINE,
     BENEFIT_HARM, PRODUCTIVITY_TIMELINES, REVERSE_ALERTS, TRUST_SCORES,
     switch_mode, acknowledge_alert, update_trust_threshold,
+    SENIORITY_PROFILES, AI_IMPACT_DASHBOARDS,
+    JUNIOR_DEPENDENCY_INDICES, SENIORITY_VELOCITY_DEFICITS,
+    TEAM_PIPELINE_RISK, ORG_PIPELINE_DEBT,
 )
 from app.models.dev_profiles import SwitchModeRequest, UpdateTrustThresholdRequest
 from app.services.seniority_detector import detect_seniority_level, compute_ai_impact, get_optimal_mode
+from app.services.seniority_profiler import compute_seniority_summary
+from app.services.pipeline_forecaster import compute_pipeline_summary
 
 router = APIRouter(prefix="/api/dev-profiles", tags=["dev-profiles"])
 
@@ -91,3 +96,63 @@ def set_trust_threshold(dev_name: str, req: UpdateTrustThresholdRequest):
     if ts is None:
         raise HTTPException(status_code=404, detail="Developer not found")
     return ts
+
+
+# ── Seniority Profiler + AI Impact Dashboard ──
+
+@router.get("/seniority-profiles")
+def seniority_profiles():
+    return SENIORITY_PROFILES
+
+
+@router.get("/seniority-profiles/{dev_name}")
+def seniority_profile(dev_name: str):
+    sp = next((s for s in SENIORITY_PROFILES if s.developer == dev_name), None)
+    if sp is None:
+        raise HTTPException(status_code=404, detail="Developer not found")
+    return sp
+
+
+@router.get("/ai-impact-dashboards")
+def ai_impact_dashboards():
+    return AI_IMPACT_DASHBOARDS
+
+
+@router.get("/ai-impact-dashboards/{dev_name}")
+def ai_impact_dashboard(dev_name: str):
+    aid = next((a for a in AI_IMPACT_DASHBOARDS if a.developer == dev_name), None)
+    if aid is None:
+        raise HTTPException(status_code=404, detail="Developer not found")
+    return aid
+
+
+@router.get("/seniority-summary")
+def seniority_summary():
+    return compute_seniority_summary()
+
+
+# ── Talent Pipeline Debt Forecaster ──
+
+@router.get("/junior-dependency-indices")
+def junior_dependency_indices():
+    return JUNIOR_DEPENDENCY_INDICES
+
+
+@router.get("/seniority-velocity-deficits")
+def seniority_velocity_deficits():
+    return SENIORITY_VELOCITY_DEFICITS
+
+
+@router.get("/team-pipeline-risk")
+def team_pipeline_risk():
+    return TEAM_PIPELINE_RISK
+
+
+@router.get("/org-pipeline-debt")
+def org_pipeline_debt():
+    return ORG_PIPELINE_DEBT
+
+
+@router.get("/pipeline-summary")
+def pipeline_summary():
+    return compute_pipeline_summary()

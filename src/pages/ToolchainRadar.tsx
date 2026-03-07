@@ -1,12 +1,16 @@
 import { useState, useEffect } from 'react'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+    LineChart, Line, AreaChart, Area,
 } from 'recharts'
-import { ArrowRight, Clock, Shuffle } from 'lucide-react'
+import { ArrowRight, Clock, Shuffle, Brain, AlertTriangle, TrendingUp, Shield, Zap, Timer } from 'lucide-react'
 import {
     toolchainRadarApi,
     type TCDeveloper, type TCTransition, type TCHourlySlot,
     type TCFrictionByTask, type TCToolUsage,
+    type TCDevWeeklyFriction, type TCRecoveryTimeEntry,
+    type TCFrictionTrendWeek, type TCCognitiveDebtScore,
+    type TCTeamDebtForecast, type TCToolchainROITrigger,
 } from '../api/client'
 
 /* ─── tool brand colours ─── */
@@ -69,6 +73,15 @@ export default function ToolchainRadar() {
     const [hourlyTimeline, setHourlyTimeline] = useState<TCHourlySlot[]>(fallbackHourly)
     const [frictionByTask, setFrictionByTask] = useState<TCFrictionByTask[]>(fallbackFriction)
     const [toolUsage, setToolUsage] = useState<TCToolUsage[]>(fallbackToolUsage)
+    // Cross-Tool Friction Heatmap
+    const [weeklyFriction, setWeeklyFriction] = useState<TCDevWeeklyFriction[]>([])
+    const [recoveryTimes, setRecoveryTimes] = useState<TCRecoveryTimeEntry[]>([])
+    const [frictionTrends, setFrictionTrends] = useState<TCFrictionTrendWeek[]>([])
+    // Cognitive Debt Accumulator
+    const [cognitiveDebtScores, setCognitiveDebtScores] = useState<TCCognitiveDebtScore[]>([])
+    const [teamDebtForecast, setTeamDebtForecast] = useState<TCTeamDebtForecast[]>([])
+    const [roiTriggers, setRoiTriggers] = useState<TCToolchainROITrigger[]>([])
+    const [selectedDebtDev, setSelectedDebtDev] = useState(0)
 
     useEffect(() => {
         toolchainRadarApi.dashboard().then((data) => {
@@ -77,6 +90,12 @@ export default function ToolchainRadar() {
             setHourlyTimeline(data.hourly_timeline)
             setFrictionByTask(data.friction_by_task)
             setToolUsage(data.tool_usage)
+            if (data.weekly_friction) setWeeklyFriction(data.weekly_friction)
+            if (data.recovery_times) setRecoveryTimes(data.recovery_times)
+            if (data.friction_trends) setFrictionTrends(data.friction_trends)
+            if (data.cognitive_debt_scores) setCognitiveDebtScores(data.cognitive_debt_scores)
+            if (data.team_debt_forecast) setTeamDebtForecast(data.team_debt_forecast)
+            if (data.roi_triggers) setRoiTriggers(data.roi_triggers)
         }).catch(() => { /* keep fallback data */ })
     }, [])
 
@@ -600,6 +619,497 @@ export default function ToolchainRadar() {
                     </p>
                 </div>
             </div>
+
+            {/* ═══════════════════════════════════════════
+                CROSS-TOOL AI FRICTION HEATMAP (Enhanced)
+                ═══════════════════════════════════════════ */}
+
+            {weeklyFriction.length > 0 && (
+                <>
+                    {/* Section Header */}
+                    <div className="flex items-center gap-3 mt-4">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                            style={{ background: 'linear-gradient(135deg, #EF444420, #F59E0B20)', border: '1px solid #EF444440' }}>
+                            <Zap size={18} style={{ color: '#F59E0B' }} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-white">Cross-Tool AI Friction Heatmap</h2>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                Per-developer weekly friction maps with recovery time tracking
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ── Weekly Developer Friction Map ── */}
+                    <div className="glass-card p-5">
+                        <h3 className="text-sm font-semibold text-white mb-1">
+                            🗓️ Weekly Developer Friction Map
+                        </h3>
+                        <p className="text-xs mb-5" style={{ color: '#94A3B8' }}>
+                            Per-developer per-day friction — darker cells = more cognitive switching cost
+                        </p>
+
+                        <div className="space-y-4">
+                            {weeklyFriction.map((devF) => {
+                                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+                                return (
+                                    <div key={devF.developer} className="p-4 rounded-xl"
+                                        style={{ background: 'rgba(30,45,74,0.3)', border: '1px solid #1E2D4A' }}>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs"
+                                                    style={{ background: 'linear-gradient(135deg, #00D4FF44, #7C3AED44)', color: '#00D4FF' }}>
+                                                    {devF.developer[0]}
+                                                </div>
+                                                <div>
+                                                    <span className="text-sm font-semibold text-white">{devF.developer}</span>
+                                                    <span className="text-xs ml-2" style={{ color: '#94A3B8' }}>{devF.week_label}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>Friction</p>
+                                                    <p className="text-sm font-bold" style={{ color: devF.total_friction_hrs > 10 ? '#EF4444' : devF.total_friction_hrs > 5 ? '#F59E0B' : '#10B981' }}>
+                                                        {devF.total_friction_hrs}h
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>Cost</p>
+                                                    <p className="text-sm font-bold" style={{ color: '#EF4444' }}>${devF.org_cost_estimate.toLocaleString()}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>Flow</p>
+                                                    <p className="text-sm font-bold" style={{ color: devF.flow_pct >= 50 ? '#10B981' : '#F59E0B' }}>{devF.flow_pct}%</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Heatmap grid: rows = days, cells = transitions */}
+                                        <div className="grid grid-cols-5 gap-1.5">
+                                            {days.map((day) => {
+                                                const dayCells = devF.cells.filter(c => c.day === day)
+                                                const dayTotal = dayCells.reduce((s, c) => s + c.hours_lost, 0)
+                                                const dayIntensity = dayCells.length > 0 ? Math.max(...dayCells.map(c => c.intensity)) : 0
+                                                const bg = dayIntensity > 0.7
+                                                    ? `rgba(239,68,68,${0.1 + dayIntensity * 0.25})`
+                                                    : dayIntensity > 0.4
+                                                        ? `rgba(245,158,11,${0.1 + dayIntensity * 0.2})`
+                                                        : `rgba(16,185,129,${0.05 + dayIntensity * 0.15})`
+                                                const textColor = dayIntensity > 0.7 ? '#EF4444' : dayIntensity > 0.4 ? '#F59E0B' : '#10B981'
+                                                return (
+                                                    <div key={day} className="p-2 rounded-lg text-center" style={{ background: bg }}>
+                                                        <p className="text-xs font-semibold" style={{ color: '#94A3B8' }}>{day}</p>
+                                                        <p className="text-lg font-black" style={{ color: textColor }}>
+                                                            {dayTotal > 0 ? `${dayTotal.toFixed(1)}h` : '—'}
+                                                        </p>
+                                                        <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                                            {dayCells.reduce((s, c) => s + c.switches, 0)} sw
+                                                        </p>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+
+                                        <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
+                                            Top friction: <span className="font-semibold text-white">{devF.top_transition}</span>
+                                        </p>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {/* ── Recovery Time Analysis + Friction Trends ── */}
+                    <div className="grid grid-cols-2 gap-6">
+                        {/* Recovery Times */}
+                        <div className="glass-card p-5">
+                            <h3 className="text-sm font-semibold text-white mb-1">
+                                <Timer size={14} className="inline mr-1" /> Recovery Time by Transition
+                            </h3>
+                            <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                                Avg & P95 cognitive recovery time per tool switch type
+                            </p>
+                            <div className="space-y-3">
+                                {[...recoveryTimes].sort((a, b) => b.avg_recovery_min - a.avg_recovery_min).map((r) => {
+                                    const maxRecovery = Math.max(...recoveryTimes.map(x => x.avg_recovery_min))
+                                    const pct = (r.avg_recovery_min / maxRecovery) * 100
+                                    const color = r.avg_recovery_min > 7 ? '#EF4444' : r.avg_recovery_min > 5 ? '#F59E0B' : '#10B981'
+                                    return (
+                                        <div key={r.transition}>
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="text-white font-medium">{r.transition}</span>
+                                                <span className="font-bold" style={{ color }}>
+                                                    {r.avg_recovery_min}m avg · {r.p95_recovery_min}m P95
+                                                </span>
+                                            </div>
+                                            <div className="progress-bar">
+                                                <div className="progress-fill"
+                                                    style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${color}88, ${color})` }} />
+                                            </div>
+                                            <div className="flex justify-between text-xs mt-0.5" style={{ color: '#94A3B8', fontSize: 10 }}>
+                                                <span>{r.sample_count} samples</span>
+                                                <span>{r.task_driven_pct}% task-driven</span>
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Friction Trend Chart */}
+                        <div className="glass-card p-5">
+                            <h3 className="text-sm font-semibold text-white mb-1">
+                                <TrendingUp size={14} className="inline mr-1" /> Weekly Friction Trend
+                            </h3>
+                            <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                                Team-wide friction cost trajectory over 4 weeks
+                            </p>
+                            {frictionTrends.length > 0 && (
+                                <>
+                                    <ResponsiveContainer width="100%" height={180}>
+                                        <AreaChart data={frictionTrends}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#1E2D4A" />
+                                            <XAxis dataKey="week" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                            <YAxis tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                            <Tooltip contentStyle={{ background: '#0F1629', border: '1px solid #1E2D4A', borderRadius: 8, fontSize: 12 }} />
+                                            <Area type="monotone" dataKey="total_hrs_lost" name="Hours Lost" stroke="#EF4444" fill="#EF444420" strokeWidth={2} />
+                                            <Area type="monotone" dataKey="total_switches" name="Switches" stroke="#F59E0B" fill="#F59E0B10" strokeWidth={2} yAxisId={0} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                    <div className="grid grid-cols-3 gap-3 mt-3">
+                                        {frictionTrends.length >= 1 && (() => {
+                                            const last = frictionTrends[frictionTrends.length - 1]
+                                            return (
+                                                <>
+                                                    <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                        <p className="text-xs" style={{ color: '#94A3B8' }}>Switches</p>
+                                                        <p className="text-sm font-bold text-white">{last.total_switches}</p>
+                                                    </div>
+                                                    <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                        <p className="text-xs" style={{ color: '#94A3B8' }}>Hrs Lost</p>
+                                                        <p className="text-sm font-bold" style={{ color: '#EF4444' }}>{last.total_hrs_lost}h</p>
+                                                    </div>
+                                                    <div className="text-center p-2 rounded-lg" style={{ background: 'rgba(30,45,74,0.5)' }}>
+                                                        <p className="text-xs" style={{ color: '#94A3B8' }}>Cost</p>
+                                                        <p className="text-sm font-bold" style={{ color: '#F59E0B' }}>${last.cost_estimate.toLocaleString()}</p>
+                                                    </div>
+                                                </>
+                                            )
+                                        })()}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
+
+            {/* ═══════════════════════════════════════════
+                COGNITIVE DEBT ACCUMULATOR (Novel Feature)
+                ═══════════════════════════════════════════ */}
+
+            {cognitiveDebtScores.length > 0 && (
+                <>
+                    {/* Section Header */}
+                    <div className="flex items-center gap-3 mt-4">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                            style={{ background: 'linear-gradient(135deg, #7C3AED20, #00D4FF20)', border: '1px solid #7C3AED40' }}>
+                            <Brain size={18} style={{ color: '#7C3AED' }} />
+                        </div>
+                        <div>
+                            <h2 className="text-lg font-bold text-white">Cognitive Debt Accumulator</h2>
+                            <p className="text-xs" style={{ color: '#94A3B8' }}>
+                                Real-time developer mental load tracking — the hidden cost of tool fragmentation
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ── Cognitive Debt Hero KPIs ── */}
+                    {(() => {
+                        const avgScore = cognitiveDebtScores.reduce((s, d) => s + d.score, 0) / cognitiveDebtScores.length
+                        const dangerCount = cognitiveDebtScores.filter(d => d.zone === 'danger').length
+                        const nearestCliff = [...cognitiveDebtScores].sort((a, b) => a.predicted_cliff_min - b.predicted_cliff_min)[0]
+                        const totalCost = roiTriggers.reduce((s, t) => s + t.weekly_cost_hrs, 0)
+                        return (
+                            <div className="grid grid-cols-4 gap-4">
+                                <div className={`glass-card p-5 text-center ${avgScore >= 60 ? 'glow-danger' : ''}`}>
+                                    <p className="section-title">Team Cognitive Debt</p>
+                                    <p className="text-4xl font-black mt-2" style={{ color: avgScore >= 60 ? '#EF4444' : avgScore >= 40 ? '#F59E0B' : '#10B981' }}>
+                                        {avgScore.toFixed(0)}
+                                    </p>
+                                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
+                                        / 100 score (lower is better)
+                                    </p>
+                                </div>
+                                <div className={`glass-card p-5 text-center ${dangerCount > 0 ? 'glow-danger' : ''}`}>
+                                    <p className="section-title">Developers in Danger</p>
+                                    <p className="text-4xl font-black mt-2" style={{ color: dangerCount > 0 ? '#EF4444' : '#10B981' }}>
+                                        {dangerCount}
+                                    </p>
+                                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
+                                        of {cognitiveDebtScores.length} total devs
+                                    </p>
+                                </div>
+                                <div className="glass-card p-5 text-center">
+                                    <p className="section-title">Nearest Cliff</p>
+                                    <p className="text-3xl font-black mt-2" style={{ color: nearestCliff.predicted_cliff_min <= 30 ? '#EF4444' : '#F59E0B' }}>
+                                        {nearestCliff.predicted_cliff_min}m
+                                    </p>
+                                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
+                                        {nearestCliff.developer}
+                                    </p>
+                                </div>
+                                <div className="glass-card p-5 text-center">
+                                    <p className="section-title">Weekly ROI Cost</p>
+                                    <p className="text-3xl font-black mt-2" style={{ color: '#F59E0B' }}>
+                                        {totalCost.toFixed(1)}h
+                                    </p>
+                                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>
+                                        From {roiTriggers.length} triggers
+                                    </p>
+                                </div>
+                            </div>
+                        )
+                    })()}
+
+                    {/* ── Per-Developer Cognitive Debt Scores ── */}
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="glass-card p-5">
+                            <h3 className="text-sm font-semibold text-white mb-4">
+                                🧠 Developer Cognitive Debt Scores
+                            </h3>
+                            <div className="space-y-2">
+                                {cognitiveDebtScores.map((d, i) => {
+                                    const zoneColor = d.zone === 'danger' ? '#EF4444' : d.zone === 'warning' ? '#F59E0B' : d.zone === 'yellow' ? '#FBBF24' : '#10B981'
+                                    return (
+                                        <button key={d.developer} onClick={() => setSelectedDebtDev(i)}
+                                            className="w-full text-left p-3 rounded-xl transition-all"
+                                            style={{
+                                                background: selectedDebtDev === i ? 'rgba(124,58,237,0.1)' : 'rgba(30,45,74,0.3)',
+                                                border: `1px solid ${selectedDebtDev === i ? 'rgba(124,58,237,0.3)' : '#1E2D4A'}`,
+                                            }}>
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs"
+                                                        style={{ background: `${zoneColor}22`, color: zoneColor }}>
+                                                        {d.developer[0]}
+                                                    </div>
+                                                    <span className="text-sm font-medium text-white">{d.developer}</span>
+                                                    <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                                                        style={{ background: `${zoneColor}18`, color: zoneColor, border: `1px solid ${zoneColor}40` }}>
+                                                        {d.zone}
+                                                    </span>
+                                                </div>
+                                                <span className="text-xl font-black" style={{ color: zoneColor }}>{d.score}</span>
+                                            </div>
+                                            <div className="progress-bar">
+                                                <div className="progress-fill"
+                                                    style={{ width: `${d.score}%`, background: `linear-gradient(90deg, ${zoneColor}88, ${zoneColor})` }} />
+                                            </div>
+                                            <div className="flex justify-between mt-1">
+                                                <span className="text-xs" style={{ color: '#94A3B8' }}>
+                                                    Cliff in {d.predicted_cliff_min}min · {d.concurrent_prs} PRs
+                                                </span>
+                                                <span className="text-xs" style={{ color: '#94A3B8' }}>
+                                                    Focus: {d.last_deep_focus_min_ago}m ago
+                                                </span>
+                                            </div>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+                        </div>
+
+                        {/* Selected developer signal breakdown */}
+                        <div className="glass-card p-5">
+                            {cognitiveDebtScores.length > 0 && (() => {
+                                const selDev = cognitiveDebtScores[selectedDebtDev]
+                                const zoneColor = selDev.zone === 'danger' ? '#EF4444' : selDev.zone === 'warning' ? '#F59E0B' : selDev.zone === 'yellow' ? '#FBBF24' : '#10B981'
+                                return (
+                                    <>
+                                        <h3 className="text-sm font-semibold text-white mb-4">
+                                            🔬 {selDev.developer} — Signal Breakdown
+                                        </h3>
+
+                                        <div className="flex items-center gap-4 mb-5 p-3 rounded-xl"
+                                            style={{ background: `${zoneColor}0D`, border: `1px solid ${zoneColor}30` }}>
+                                            <div className="text-center">
+                                                <p className="text-3xl font-black" style={{ color: zoneColor }}>{selDev.score}</p>
+                                                <p className="text-xs" style={{ color: '#94A3B8' }}>/ 100</p>
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-xs font-semibold" style={{ color: zoneColor }}>
+                                                    Productivity cliff in ~{selDev.predicted_cliff_min} minutes
+                                                </p>
+                                                <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                                                    {selDev.recommended_action}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {selDev.signals.map((sig) => {
+                                                const sigColor = sig.level === 'critical' ? '#EF4444' : sig.level === 'high' ? '#F97316' : sig.level === 'elevated' ? '#F59E0B' : sig.level === 'moderate' ? '#FBBF24' : '#10B981'
+                                                return (
+                                                    <div key={sig.signal} className="p-3 rounded-lg"
+                                                        style={{ background: 'rgba(30,45,74,0.4)', border: '1px solid #1E2D4A' }}>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <span className="text-xs font-medium text-white">{sig.signal}</span>
+                                                            <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                                                                style={{ background: `${sigColor}18`, color: sigColor }}>{sig.level}</span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm font-bold" style={{ color: sigColor }}>{sig.current_value}</span>
+                                                            <span className="text-xs" style={{ color: '#94A3B8' }}>weight: {(sig.weight * 100).toFixed(0)}%</span>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            })}
+                                        </div>
+                                    </>
+                                )
+                            })()}
+                        </div>
+                    </div>
+
+                    {/* ── Team Cognitive Debt Weekly Forecast ── */}
+                    {teamDebtForecast.length > 0 && (
+                        <div className="glass-card p-5">
+                            <h3 className="text-sm font-semibold text-white mb-1">
+                                📅 Team Cognitive Debt Forecast — Weekly Heatmap
+                            </h3>
+                            <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                                Predicted daily cognitive debt scores — spot chronic patterns before burnout
+                            </p>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-xs">
+                                    <thead>
+                                        <tr>
+                                            <th className="text-left py-2 px-3 font-semibold" style={{ color: '#94A3B8' }}>Developer</th>
+                                            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(d => (
+                                                <th key={d} className="text-center py-2 px-3 font-semibold" style={{ color: '#94A3B8' }}>{d}</th>
+                                            ))}
+                                            <th className="text-center py-2 px-3 font-semibold" style={{ color: '#94A3B8' }}>Avg</th>
+                                            <th className="text-center py-2 px-3 font-semibold" style={{ color: '#94A3B8' }}>Chronic</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {teamDebtForecast.map((f) => {
+                                            const days = [f.mon, f.tue, f.wed, f.thu, f.fri]
+                                            return (
+                                                <tr key={f.developer} style={{ borderTop: '1px solid #1E2D4A' }}>
+                                                    <td className="py-2.5 px-3 font-medium text-white">{f.developer}</td>
+                                                    {days.map((score, i) => {
+                                                        const color = score >= 70 ? '#EF4444' : score >= 50 ? '#F59E0B' : score >= 35 ? '#FBBF24' : '#10B981'
+                                                        const bg = score >= 70 ? 'rgba(239,68,68,0.15)' : score >= 50 ? 'rgba(245,158,11,0.12)' : score >= 35 ? 'rgba(251,191,36,0.08)' : 'rgba(16,185,129,0.08)'
+                                                        return (
+                                                            <td key={i} className="py-2.5 px-3 text-center">
+                                                                <span className="inline-block px-2 py-1 rounded-lg font-bold"
+                                                                    style={{ background: bg, color, minWidth: 36 }}>
+                                                                    {score}
+                                                                </span>
+                                                            </td>
+                                                        )
+                                                    })}
+                                                    <td className="py-2.5 px-3 text-center">
+                                                        <span className="font-bold" style={{ color: f.avg_score >= 60 ? '#EF4444' : f.avg_score >= 40 ? '#F59E0B' : '#10B981' }}>
+                                                            {f.avg_score}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-2.5 px-3 text-center">
+                                                        {f.chronic_warning_days > 0 ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+                                                                style={{ background: 'rgba(239,68,68,0.12)', color: '#EF4444' }}>
+                                                                <AlertTriangle size={10} /> {f.chronic_warning_days}d
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ color: '#10B981' }}>✓</span>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Toolchain ROI Triggers ── */}
+                    {roiTriggers.length > 0 && (
+                        <div className="glass-card p-5">
+                            <h3 className="text-sm font-semibold text-white mb-1">
+                                <Shield size={14} className="inline mr-1" /> Toolchain ROI Re-evaluation Triggers
+                            </h3>
+                            <p className="text-xs mb-4" style={{ color: '#94A3B8' }}>
+                                When cognitive debt data contradicts your toolchain investment thesis
+                            </p>
+
+                            <div className="space-y-3">
+                                {roiTriggers.map((t) => {
+                                    const sevColor = t.severity === 'critical' ? '#EF4444' : t.severity === 'warning' ? '#F59E0B' : '#3B82F6'
+                                    const debtDelta = t.avg_cognitive_debt - t.comparison_debt
+                                    return (
+                                        <div key={t.combination} className="p-4 rounded-xl"
+                                            style={{ background: `${sevColor}08`, border: `1px solid ${sevColor}25` }}>
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <AlertTriangle size={14} style={{ color: sevColor }} />
+                                                    <span className="text-sm font-bold text-white">{t.combination}</span>
+                                                    <span className="text-xs px-1.5 py-0.5 rounded-full font-semibold"
+                                                        style={{ background: `${sevColor}18`, color: sevColor }}>{t.severity}</span>
+                                                </div>
+                                                <span className="text-sm font-bold" style={{ color: sevColor }}>
+                                                    -{t.weekly_cost_hrs}h/week
+                                                </span>
+                                            </div>
+
+                                            <div className="flex items-center gap-6 mb-2">
+                                                <div>
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>Avg Cognitive Debt</p>
+                                                    <p className="text-lg font-black" style={{ color: sevColor }}>{t.avg_cognitive_debt}</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>vs</p>
+                                                    <p className="text-xs font-bold" style={{ color: '#EF4444' }}>+{debtDelta.toFixed(1)}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs" style={{ color: '#94A3B8' }}>{t.comparison_label}</p>
+                                                    <p className="text-lg font-black" style={{ color: '#10B981' }}>{t.comparison_debt}</p>
+                                                </div>
+                                            </div>
+
+                                            <p className="text-xs" style={{ color: '#94A3B8' }}>{t.recommendation}</p>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Cognitive Debt Bottom Insight ── */}
+                    <div className="flex items-center gap-4 px-5 py-4 rounded-xl"
+                        style={{
+                            background: 'linear-gradient(135deg, rgba(124,58,237,0.1), rgba(239,68,68,0.06))',
+                            border: '1px solid rgba(124,58,237,0.2)',
+                        }}>
+                        <div className="text-2xl">🧠</div>
+                        <div>
+                            <p className="text-sm font-semibold text-white">
+                                Cognitive Debt Intelligence
+                            </p>
+                            <p className="text-xs mt-1" style={{ color: '#94A3B8' }}>
+                                You know which AI tools your developers have. This is the only platform that shows the{' '}
+                                <span className="text-purple-400 font-semibold">real-time cognitive cost</span> of running them
+                                together — and predicts exactly{' '}
+                                <span className="text-red-400 font-semibold">when to intervene</span> before productivity collapses.
+                                Currently tracking {cognitiveDebtScores.length} developers across {roiTriggers.length} toolchain combinations.
+                            </p>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     )
 }
