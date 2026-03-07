@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Search, MessageSquare, AlertTriangle, BookOpen, GitBranch, HelpCircle, Layers, Shield, Clock, Users, FileWarning, Link2, Calendar, TrendingDown, DollarSign, Activity, Skull, UserX, Target, Zap, FileText, CheckCircle } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, LineChart, Line } from 'recharts'
+import FeatureNav from '../components/FeatureNav'
 import { knowledgeVaultApi, type KVDashboard, type KVNode, type KVInterviewMessage, type KVDecision, type KVRiskScore, type KVExtraction, type KVOnboardingQuery, type KVArchaeologyResult, type KVDecayItem, type KVInterviewSession, type KVTransferEntry, type KVUndocumentedRegion, type KVOnboardingInsight, type KVDecisionChainLink, type KVExtractionSession, type KVDecisionNodeObj, type KVConstraintAlert, type KVKnowledgeDecayEntry, type KVAssetValuation, type KVMortalityTimeline, type KVDepartureExposure } from '../api/client'
 
 const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
@@ -13,6 +14,8 @@ const chartTooltipStyle = {
 export default function KnowledgeVault() {
     const [query, setQuery] = useState('')
     const [chatInput, setChatInput] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
     const [nodes, setNodes] = useState<KVNode[]>([])
     const [interviews, setInterviews] = useState<KVInterviewMessage[]>([])
@@ -57,7 +60,8 @@ export default function KnowledgeVault() {
             setAssetValuations(d.asset_valuations)
             setMortalityTimeline(d.mortality_timeline)
             setDepartureExposure(d.departure_exposure)
-        })
+            setLoading(false)
+        }).catch((err) => { console.error('KnowledgeVault fetch error:', err); setLoading(false) })
     }, [])
 
     const riskLabel = riskScore ? (riskScore.overall_score >= 70 ? '🔴 HIGH' : riskScore.overall_score >= 40 ? '🟠 MEDIUM' : '🟢 LOW') : '—'
@@ -74,15 +78,36 @@ export default function KnowledgeVault() {
 
     const selectedNodeObj = nodes.find((n) => n.id === selectedNode)
 
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-64">
+                <div className="text-sm" style={{ color: '#94A3B8' }}>Loading Knowledge Vault…</div>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6 animate-fade-in">
-            <div>
-                <h1 className="text-2xl font-bold text-white">Knowledge Vault</h1>
-                <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
-                    Preserve the "why" — architectural reasoning that lives in developers' minds
-                </p>
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Knowledge Vault</h1>
+                    <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
+                        Preserve the "why" — architectural reasoning that lives in developers' minds
+                    </p>
+                </div>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'decay', label: 'Knowledge Decay' },
+                    { key: 'mortality', label: 'Knowledge Mortality' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* ── Knowledge Risk Score (Feature 6) ── */}
             <div
                 className="flex items-start gap-5 px-5 py-4 rounded-xl"
@@ -373,6 +398,9 @@ export default function KnowledgeVault() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'decay' && (<>
             {/* ── Knowledge Decay Tracker ── */}
             <div className="glass-card p-5">
                 <h3 className="text-sm font-semibold text-white mb-1">
@@ -894,6 +922,9 @@ export default function KnowledgeVault() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'mortality' && (<>
             {/* ── Knowledge Mortality Timeline ── */}
             {mortalityTimeline && (
                 <div className="glass-card p-5">
@@ -1029,6 +1060,14 @@ export default function KnowledgeVault() {
                     </div>
                 </div>
             </div>
+            {!mortalityTimeline && !departureExposure && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">💀</div>
+                    <p className="text-sm font-medium text-white">Knowledge Mortality</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No knowledge mortality data available yet. Timeline will appear once the system tracks knowledge holder departure risks.</p>
+                </div>
+            )}
+            </>)}
         </div>
     )
 }

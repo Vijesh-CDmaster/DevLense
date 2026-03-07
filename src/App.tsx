@@ -23,14 +23,10 @@ export default function App() {
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
 
-                    {/* Protected dashboard */}
+                    {/* Dashboard (auth bypass for now) */}
                     <Route
                         path="/"
-                        element={
-                            <RequireAuth>
-                                <Layout />
-                            </RequireAuth>
-                        }
+                        element={<Layout />}
                     >
                         <Route index element={<Navigate to="/overview" replace />} />
                         <Route path="overview" element={<Overview />} />

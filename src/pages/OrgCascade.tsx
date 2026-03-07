@@ -4,6 +4,7 @@ import {
     RadialBarChart, RadialBar, Legend,
 } from 'recharts'
 import { Download, Trash2, AlertTriangle, Gauge, Users, TrendingDown, Zap } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import {
     orgCascadeApi,
     type OrgGapSummary, type OCDoraMetric, type OCBottleneck,
@@ -61,6 +62,7 @@ const fallbackCorrelations: OCDoraCorrelation[] = [
 
 export default function OrgCascade() {
     const [summary, setSummary] = useState<OrgGapSummary>(fallbackSummary)
+    const [activeTab, setActiveTab] = useState('dashboard')
     const [doraData, setDoraData] = useState<OCDoraMetric[]>(fallbackDora)
     const [bottlenecks, setBottlenecks] = useState<OCBottleneck[]>(fallbackBottlenecks)
     const [amplifiers, setAmplifiers] = useState<OCAmplifier[]>(fallbackAmplifiers)
@@ -119,6 +121,17 @@ export default function OrgCascade() {
                 </button>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'ai-waste', label: 'AI Waste & ROI' },
+                    { key: 'cascade', label: 'DORA-AI Cascade' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* Org Gap Hero */}
             <div className="grid grid-cols-3 gap-4">
                 <div className="glass-card p-5 text-center glow-danger">
@@ -325,6 +338,9 @@ export default function OrgCascade() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'ai-waste' && (<>
             {/* ══════════════════════════════════════════════ */}
             {/* TRUE AI ROI CARD — The Hero of Waste Classifier */}
             {/* ══════════════════════════════════════════════ */}
@@ -495,7 +511,17 @@ export default function OrgCascade() {
                     </div>
                 )}
             </div>
+            {!trueRoi && wasteEntries.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🗑️</div>
+                    <p className="text-sm font-medium text-white">AI Waste Classification</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No AI waste data available yet. Waste classifications will appear once the system analyzes AI-assisted workflow patterns.</p>
+                </div>
+            )}
 
+            </>)}
+
+            {activeTab === 'cascade' && (<>
             {/* ══════════════════════════════════════════════ */}
             {/* CASCADE EFFICIENCY SCORE — Single Number Hero */}
             {/* ══════════════════════════════════════════════ */}
@@ -694,6 +720,14 @@ export default function OrgCascade() {
                     </div>
                 )}
             </div>
+            {!cascadeEfficiency && flowDetails.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">⚡</div>
+                    <p className="text-sm font-medium text-white">Cascade Efficiency</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No cascade efficiency data available yet. Metrics will appear once the system tracks organizational signal flow.</p>
+                </div>
+            )}
+            </>)}
         </div>
     )
 }

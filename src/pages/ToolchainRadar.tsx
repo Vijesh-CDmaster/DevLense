@@ -4,6 +4,7 @@ import {
     LineChart, Line, AreaChart, Area,
 } from 'recharts'
 import { ArrowRight, Clock, Shuffle, Brain, AlertTriangle, TrendingUp, Shield, Zap, Timer } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import {
     toolchainRadarApi,
     type TCDeveloper, type TCTransition, type TCHourlySlot,
@@ -68,6 +69,7 @@ const fallbackToolUsage: TCToolUsage[] = [
 
 export default function ToolchainRadar() {
     const [selectedDev, setSelectedDev] = useState(0)
+    const [activeTab, setActiveTab] = useState('dashboard')
     const [developers, setDevelopers] = useState<TCDeveloper[]>(fallbackDevs)
     const [transitionMatrix, setTransitionMatrix] = useState<TCTransition[]>(fallbackTransitions)
     const [hourlyTimeline, setHourlyTimeline] = useState<TCHourlySlot[]>(fallbackHourly)
@@ -120,6 +122,17 @@ export default function ToolchainRadar() {
                 </button>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'cross-tool', label: 'Cross-Tool Friction' },
+                    { key: 'cognitive', label: 'Cognitive Debt' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* Hero KPIs */}
             <div className="grid grid-cols-4 gap-4">
                 <div className="glass-card p-5 text-center glow-danger">
@@ -620,6 +633,9 @@ export default function ToolchainRadar() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'cross-tool' && (<>
             {/* ═══════════════════════════════════════════
                 CROSS-TOOL AI FRICTION HEATMAP (Enhanced)
                 ═══════════════════════════════════════════ */}
@@ -803,7 +819,17 @@ export default function ToolchainRadar() {
                     </div>
                 </>
             )}
+            {weeklyFriction.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🔧</div>
+                    <p className="text-sm font-medium text-white">Cross-Tool Friction</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No cross-tool friction data available yet. Heatmaps will appear once the system tracks per-developer weekly tool friction patterns.</p>
+                </div>
+            )}
 
+            </>)}
+
+            {activeTab === 'cognitive' && (<>
             {/* ═══════════════════════════════════════════
                 COGNITIVE DEBT ACCUMULATOR (Novel Feature)
                 ═══════════════════════════════════════════ */}
@@ -1110,6 +1136,14 @@ export default function ToolchainRadar() {
                     </div>
                 </>
             )}
+            {cognitiveDebtScores.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🧠</div>
+                    <p className="text-sm font-medium text-white">Cognitive Debt Accumulator</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No cognitive debt data available yet. Scores will appear once the system tracks developer mental load across tool combinations.</p>
+                </div>
+            )}
+            </>)}
         </div>
     )
 }

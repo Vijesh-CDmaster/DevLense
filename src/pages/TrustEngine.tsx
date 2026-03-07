@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ShieldCheck, AlertCircle, Download, Eye, FileWarning, TrendingUp, TrendingDown, Users, Calculator, BarChart3, Shield, Lock, CheckCircle, XCircle, Clock, Layers } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     AreaChart, Area, LineChart, Line, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -14,6 +15,7 @@ import type {
 export default function TrustEngine() {
     const [activeIdx, setActiveIdx] = useState(1)
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
     const [suggestions, setSuggestions] = useState<{
         code: string; trust: number; taskType: string; complexity: string
@@ -107,6 +109,24 @@ export default function TrustEngine() {
         )
     }
 
+    if (suggestions.length === 0) {
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Trust Engine</h1>
+                    <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
+                        Per-suggestion trust scoring — should you accept, verify, or reject?
+                    </p>
+                </div>
+                <div className="glass-card p-12 text-center">
+                    <div className="text-4xl mb-4">🔐</div>
+                    <p className="text-sm font-medium text-white">No Trust Data Available</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Unable to load trust scores. Please ensure the backend server is running on port 8000.</p>
+                </div>
+            </div>
+        )
+    }
+
     const s = suggestions[activeIdx] || suggestions[0]
     const trustColor = s.level === 'green' ? '#10B981' : s.level === 'amber' ? '#F59E0B' : '#EF4444'
 
@@ -134,6 +154,17 @@ export default function TrustEngine() {
                 </button>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'trust-scorer', label: 'Trust Scorer' },
+                    { key: 'verification', label: 'Verification & Calibration' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* ══════ Real-time Trust Score per Suggestion ══════ */}
             <div className="glass-card p-6">
                 <div className="grid grid-cols-2 gap-8 items-start">
@@ -831,6 +862,9 @@ export default function TrustEngine() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'trust-scorer' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  9-SIGNAL PER-SUGGESTION TRUST SCORER + EXPLAINABILITY
             ═══════════════════════════════════════════════════════════════════ */}
@@ -1117,7 +1151,17 @@ export default function TrustEngine() {
                     })()}
                 </div>
             )}
+            {perSuggestionScores.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🔐</div>
+                    <p className="text-sm font-medium text-white">9-Signal Trust Scorer</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No per-suggestion trust scores available yet. Scores will appear once the system evaluates AI suggestions with the 9-signal model.</p>
+                </div>
+            )}
 
+            </>)}
+
+            {activeTab === 'verification' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  VERIFICATION TAX SUMMARY
             ═══════════════════════════════════════════════════════════════════ */}
@@ -1277,6 +1321,14 @@ export default function TrustEngine() {
                     </p>
                 </div>
             </div>
+            {!vteSummary && !calibrationReport && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">⏱️</div>
+                    <p className="text-sm font-medium text-white">Verification & Calibration</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No verification tax data available yet. Metrics will appear once the system tracks developer verification patterns.</p>
+                </div>
+            )}
+            </>)}
         </div>
     )
 }

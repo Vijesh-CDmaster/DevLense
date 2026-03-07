@@ -4,6 +4,7 @@ import {
     LineChart, Line, AreaChart, Area, Legend,
 } from 'recharts'
 import { TrendingDown, TrendingUp, Clock, Download } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import { productivityHubApi } from '../api/client'
 
 const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', green: '#10B981' }
@@ -11,6 +12,7 @@ const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', g
 export default function ProductivityHub() {
     const [selectedDev, setSelectedDev] = useState(0)
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
     // API-driven state
     const [hpsData, setHpsData] = useState<{ dimension: string; value: number }[]>([])
@@ -56,6 +58,24 @@ export default function ProductivityHub() {
         )
     }
 
+    if (devFlowScores.length === 0) {
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Productivity Hub</h1>
+                    <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
+                        Holistic Productivity Score — far beyond lines of code
+                    </p>
+                </div>
+                <div className="glass-card p-12 text-center">
+                    <div className="text-4xl mb-4">⚡</div>
+                    <p className="text-sm font-medium text-white">No Productivity Data Available</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Unable to load productivity metrics. Please ensure the backend server is running on port 8000.</p>
+                </div>
+            </div>
+        )
+    }
+
     const dev = devFlowScores[selectedDev] || devFlowScores[0]
 
     return (
@@ -72,6 +92,16 @@ export default function ProductivityHub() {
                 </button>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'ai-quality', label: 'AI Quality & Rework' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* ══════ HPS Hero ══════ */}
             <div className="glass-card p-6">
                 <div className="grid grid-cols-2 gap-8 items-center">
@@ -310,6 +340,9 @@ export default function ProductivityHub() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'ai-quality' && (<>
             {/* ══════ AI Quality Ratio ══════ */}
             <div className="glass-card p-5">
                 <div className="flex items-center justify-between mb-4">
@@ -483,6 +516,7 @@ export default function ProductivityHub() {
                     </p>
                 </div>
             </div>
+            </>)}
         </div>
     )
 }

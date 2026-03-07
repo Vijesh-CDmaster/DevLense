@@ -4,6 +4,7 @@ import {
     AreaChart, Area, RadarChart, Radar, PolarGrid, PolarAngleAxis, PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import { AlertTriangle, Shield, TrendingUp, TrendingDown, Download, Zap, RefreshCw, Eye, GitBranch, Lock, Layers } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import {
     debtRadarApi, type DebtRadarDashboard,
     type DRPreCommitScan, type DRSprintDebtProjection,
@@ -16,6 +17,7 @@ const riskColors: Record<string, string> = { red: '#EF4444', amber: '#F59E0B', g
 
 export default function DebtRadar() {
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
     // API-driven state
     const [modules, setModules] = useState<{ name: string; risk: number; level: string; label: string }[]>([])
@@ -94,6 +96,17 @@ export default function DebtRadar() {
                 </button>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'pre-commit', label: 'Pre-Commit Scanner' },
+                    { key: 'arch-drift', label: 'Architecture Drift' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* ══════ Status Cards ══════ */}
             <div className="grid grid-cols-4 gap-4">
                 <div className="glass-card p-5 text-center glow-danger">
@@ -487,6 +500,9 @@ export default function DebtRadar() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'pre-commit' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  ENHANCED PRE-COMMIT DEBT SCORER (8-Signal per-block)
             ═══════════════════════════════════════════════════════════════════ */}
@@ -664,7 +680,17 @@ export default function DebtRadar() {
                     )}
                 </>
             )}
+            {preCommitScans.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🔬</div>
+                    <p className="text-sm font-medium text-white">Pre-Commit Scanner</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No pre-commit scan data available yet. Scans will appear once the git hook layer captures staged file analysis.</p>
+                </div>
+            )}
 
+            </>)}
+
+            {activeTab === 'arch-drift' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  ARCHITECTURAL DRIFT MONITOR
             ═══════════════════════════════════════════════════════════════════ */}
@@ -1001,6 +1027,7 @@ export default function DebtRadar() {
                     </p>
                 </div>
             </div>
+            </>)}
         </div>
     )
 }

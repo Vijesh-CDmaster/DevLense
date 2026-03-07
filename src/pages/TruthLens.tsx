@@ -4,6 +4,7 @@ import {
     BarChart, Bar, AreaChart, Area,
 } from 'recharts'
 import { Send, Bell, ArrowRight, TrendingUp, TrendingDown, Clock, MessageSquare, CheckCircle, AlertTriangle, Shield, Target, Activity, Eye, Zap, FileWarning } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import { truthLensApi, type TruthLensDashboard, type TLDevBeliefAudit, type TLBiasTypology, type TLCalibrationScore, type TLBeliefSummary, type TLDecisionSignal, type TLContaminationAssessment, type TLPostDecisionOutcome, type TLOrgContaminationSummary, type TLContaminationSummary } from '../api/client'
 
 /* ─────── Local types for UI (camelCase mapping) ─────── */
@@ -42,6 +43,7 @@ function GaugeMeter({ value, label, color, sub }: { value: string; label: string
 }
 
 export default function TruthLens() {
+    const [activeTab, setActiveTab] = useState('dashboard')
     const [alertThreshold, setAlertThreshold] = useState(20)
     const [surveyOpen, setSurveyOpen] = useState(false)
     const [surveyAnswer, setSurveyAnswer] = useState('')
@@ -141,6 +143,17 @@ export default function TruthLens() {
                 </div>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'belief-audit', label: 'Belief Audit Engine' },
+                    { key: 'contamination', label: 'Contamination Tracker' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* Illusion Score Banner */}
             <div
                 className="flex items-center gap-4 px-5 py-4 rounded-xl"
@@ -617,6 +630,9 @@ export default function TruthLens() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'belief-audit' && (<>
             {/* ══════════════════════════════════════════════════════════════════
                 ██  BELIEF AUDIT ENGINE
                 ══════════════════════════════════════════════════════════════════ */}
@@ -805,6 +821,9 @@ export default function TruthLens() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'contamination' && (<>
             {/* ══════════════════════════════════════════════════════════════════
                 ██  DECISION CONTAMINATION TRACKER
                 ══════════════════════════════════════════════════════════════════ */}
@@ -1069,6 +1088,7 @@ export default function TruthLens() {
                     </p>
                 </div>
             </div>
+            </>)}
         </div>
     )
 }

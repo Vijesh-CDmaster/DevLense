@@ -5,6 +5,7 @@ import {
     PolarRadiusAxis, Radar, Legend, PieChart, Pie,
 } from 'recharts'
 import { CheckCircle, XCircle, Download, ArrowRight, AlertTriangle, Clock, TrendingUp, Zap, Shield, DollarSign, Users, Eye } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import {
     leadershipApi, LVDeveloperFriction, LVFrictionTrendPoint, LVImpactSimulation,
     LVEmpathyDimension, LVLeadershipBriefing, LVEscalationItem,
@@ -16,6 +17,7 @@ import {
 export default function LeadershipView() {
     const [surveyOpen, setSurveyOpen] = useState(false)
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
     // API state
     const [frictionData, setFrictionData] = useState<{ area: string; devHours: number; leaderEstimate: number; severity: string }[]>([])
@@ -105,7 +107,7 @@ export default function LeadershipView() {
 
     return (
         <div className="space-y-6 animate-fade-in">
-            <div className="flex items-start justify-between">
+            <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold text-white">Leadership View</h1>
                     <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
@@ -122,6 +124,17 @@ export default function LeadershipView() {
                 </div>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'friction', label: 'Friction & ROI' },
+                    { key: 'decisions', label: 'Decision Impact' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             {/* ══════ Empathy Score Hero ══════ */}
             <div
                 className="flex items-center gap-6 px-6 py-5 rounded-xl"
@@ -745,6 +758,9 @@ export default function LeadershipView() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'friction' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  REAL-TIME DEVELOPER FRICTION HEATMAP + NET AI ROI
             ═══════════════════════════════════════════════════════════════════ */}
@@ -888,7 +904,17 @@ export default function LeadershipView() {
                     </div>
                 </div>
             )}
+            {(rtFriction.length === 0 || !netAiRoi) && !leaderBrief && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🔥</div>
+                    <p className="text-sm font-medium text-white">Friction & ROI Analysis</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No real-time friction data available yet. Heatmaps will appear once the system captures developer friction telemetry.</p>
+                </div>
+            )}
 
+            </>)}
+
+            {activeTab === 'decisions' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  DECISION IMPACT MEASUREMENT (Pre/Post Windows)
             ═══════════════════════════════════════════════════════════════════ */}
@@ -1302,6 +1328,14 @@ export default function LeadershipView() {
                     </p>
                 </div>
             </div>
+            {decisionMeasurements.length === 0 && !debtLedger && !biDashboard && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">⚡</div>
+                    <p className="text-sm font-medium text-white">Decision Impact</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No decision measurement data available yet. Impact analysis will appear once the system tracks leadership decisions with pre/post windows.</p>
+                </div>
+            )}
+            </>)}
         </div>
     )
 }

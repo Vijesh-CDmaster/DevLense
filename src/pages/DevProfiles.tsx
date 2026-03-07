@@ -4,6 +4,7 @@ import {
     AreaChart, Area, Cell,
 } from 'recharts'
 import { TrendingUp, TrendingDown, Download, Shield, AlertTriangle, Zap, Eye, Target, Users, DollarSign, Activity, BarChart3 } from 'lucide-react'
+import FeatureNav from '../components/FeatureNav'
 import { devProfilesApi, type DPSeniorityProfile, type DPAIImpactDashboard, type DPSenioritySummary, type DPJuniorDependencyIndex, type DPSeniorityVelocityDeficit, type DPTeamPipelineRisk, type DPOrgPipelineDebtReport, type DPPipelineSummary } from '../api/client'
 
 const modeColors: Record<string, string> = {
@@ -15,6 +16,7 @@ const modeColors: Record<string, string> = {
 export default function DevProfiles() {
     const [selected, setSelected] = useState(0)
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState('dashboard')
 
     // API-driven state
     const [developers, setDevelopers] = useState<{
@@ -113,6 +115,24 @@ export default function DevProfiles() {
         )
     }
 
+    if (developers.length === 0) {
+        return (
+            <div className="space-y-6 animate-fade-in">
+                <div>
+                    <h1 className="text-2xl font-bold text-white">Dev Profiles</h1>
+                    <p className="text-sm mt-1" style={{ color: '#94A3B8' }}>
+                        Seniority-aware AI adaptation — different developers need different AI modes
+                    </p>
+                </div>
+                <div className="glass-card p-12 text-center">
+                    <div className="text-4xl mb-4">👥</div>
+                    <p className="text-sm font-medium text-white">No Developer Data Available</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>Unable to load developer profiles. Please ensure the backend server is running on port 8000.</p>
+                </div>
+            </div>
+        )
+    }
+
     const dev = developers[selected] || developers[0]
     const impactColor = dev.aiImpact >= 0 ? '#10B981' : '#EF4444'
     const devTimeline = productivityTimeline.find(pt => pt.dev === dev.name)?.timeline || []
@@ -137,6 +157,17 @@ export default function DevProfiles() {
                 </button>
             </div>
 
+            <FeatureNav
+                tabs={[
+                    { key: 'dashboard', label: 'Dashboard' },
+                    { key: 'seniority', label: 'Seniority Analysis' },
+                    { key: 'pipeline', label: 'Pipeline Forecaster' },
+                ]}
+                activeTab={activeTab}
+                onChange={setActiveTab}
+            />
+
+            {activeTab === 'dashboard' && (<>
             <div className="grid grid-cols-3 gap-6">
                 {/* Developer List */}
                 <div className="glass-card p-4 space-y-2">
@@ -636,6 +667,9 @@ export default function DevProfiles() {
                 </div>
             </div>
 
+            </>)}
+
+            {activeTab === 'seniority' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  SENIORITY SUMMARY — Org-Level AI Impact KPIs
             ═══════════════════════════════════════════════════════════════════ */}
@@ -669,7 +703,17 @@ export default function DevProfiles() {
                     )}
                 </div>
             )}
+            {!senioritySummary && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">📊</div>
+                    <p className="text-sm font-medium text-white">Seniority Analysis</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No seniority summary data available yet. Analysis will appear once the system profiles developer experience levels.</p>
+                </div>
+            )}
 
+            </>)}
+
+            {activeTab === 'pipeline' && (<>
             {/* ═══════════════════════════════════════════════════════════════════
                 ██  TALENT PIPELINE DEBT FORECASTER
             ═══════════════════════════════════════════════════════════════════ */}
@@ -959,6 +1003,14 @@ export default function DevProfiles() {
                     </p>
                 </div>
             </div>
+            {!pipelineSummary && jdiData.length === 0 && (
+                <div className="glass-card p-8 text-center">
+                    <div className="text-4xl mb-3">🛡️</div>
+                    <p className="text-sm font-medium text-white">Pipeline Forecaster</p>
+                    <p className="text-xs mt-2" style={{ color: '#94A3B8' }}>No talent pipeline data available yet. Forecasts will appear once the system analyzes developer growth patterns.</p>
+                </div>
+            )}
+            </>)}
         </div>
     )
 }
