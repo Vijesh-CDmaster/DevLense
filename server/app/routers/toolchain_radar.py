@@ -1,10 +1,8 @@
-from fastapi import APIRouter
-from app.data.toolchain_radar_data import (
-    get_full_dashboard, DEVELOPERS, TRANSITION_MATRIX,
-    HOURLY_TIMELINE, FRICTION_BY_TASK, TOOL_USAGE,
-    WEEKLY_FRICTION, RECOVERY_TIMES, FRICTION_TRENDS,
-    COGNITIVE_DEBT_SCORES, TEAM_DEBT_FORECAST, ROI_TRIGGERS,
-)
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.repository import get_dashboard, get_data_key
 from app.services.friction_analyzer import compute_friction_summary
 from app.services.cognitive_debt import compute_team_debt_summary
 
@@ -12,74 +10,74 @@ router = APIRouter(prefix="/api/toolchain-radar", tags=["toolchain-radar"])
 
 
 @router.get("/dashboard")
-def dashboard():
-    return get_full_dashboard()
+async def dashboard(db: AsyncSession = Depends(get_db)):
+    return await get_dashboard(db, "toolchain_radar")
 
 
 @router.get("/developers")
-def developers():
-    return DEVELOPERS
+async def developers(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "developers")
 
 
 @router.get("/transitions")
-def transitions():
-    return TRANSITION_MATRIX
+async def transitions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "transition_matrix")
 
 
 @router.get("/hourly-timeline")
-def hourly_timeline():
-    return HOURLY_TIMELINE
+async def hourly_timeline(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "hourly_timeline")
 
 
 @router.get("/friction-by-task")
-def friction_by_task():
-    return FRICTION_BY_TASK
+async def friction_by_task(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "friction_by_task")
 
 
 @router.get("/tool-usage")
-def tool_usage():
-    return TOOL_USAGE
+async def tool_usage(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "tool_usage")
 
 
 # ── Cross-Tool Friction Heatmap endpoints ──
 
 @router.get("/weekly-friction")
-def weekly_friction():
-    return WEEKLY_FRICTION
+async def weekly_friction(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "weekly_friction")
 
 
 @router.get("/recovery-times")
-def recovery_times():
-    return RECOVERY_TIMES
+async def recovery_times(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "recovery_times")
 
 
 @router.get("/friction-trends")
-def friction_trends():
-    return FRICTION_TRENDS
+async def friction_trends(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "friction_trends")
 
 
 @router.get("/friction-summary")
-def friction_summary():
+async def friction_summary():
     return compute_friction_summary()
 
 
 # ── Cognitive Debt Accumulator endpoints ──
 
 @router.get("/cognitive-debt-scores")
-def cognitive_debt_scores():
-    return COGNITIVE_DEBT_SCORES
+async def cognitive_debt_scores(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "cognitive_debt_scores")
 
 
 @router.get("/team-debt-forecast")
-def team_debt_forecast():
-    return TEAM_DEBT_FORECAST
+async def team_debt_forecast(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "team_debt_forecast")
 
 
 @router.get("/roi-triggers")
-def roi_triggers():
-    return ROI_TRIGGERS
+async def roi_triggers(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "toolchain_radar", "roi_triggers")
 
 
 @router.get("/cognitive-debt-summary")
-def cognitive_debt_summary():
+async def cognitive_debt_summary():
     return compute_team_debt_summary()

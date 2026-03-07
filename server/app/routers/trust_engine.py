@@ -1,9 +1,8 @@
-from fastapi import APIRouter
-from app.data.trust_engine_data import (
-    get_full_dashboard, SUGGESTIONS, TASK_TYPES, CALIBRATION,
-    CONFIDENCE_METERS, VERIFY_ALERTS, WEEKLY_REPORT, DEVELOPER_PROFILES,
-    PER_SUGGESTION_SCORES, VTE_PROTOCOLS, CALIBRATION_REPORT,
-)
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.repository import get_dashboard, get_data_key
 from app.services.trust_scorer import compute_trust_score, should_verify
 from app.services.vte_engine import get_vte_checklist, compute_verification_tax_summary
 
@@ -11,38 +10,38 @@ router = APIRouter(prefix="/api/trust-engine", tags=["trust-engine"])
 
 
 @router.get("/dashboard")
-def dashboard():
-    return get_full_dashboard()
+async def dashboard(db: AsyncSession = Depends(get_db)):
+    return await get_dashboard(db, "trust_engine")
 
 
 @router.get("/suggestions")
-def suggestions():
-    return SUGGESTIONS
+async def suggestions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "suggestions")
 
 
 @router.get("/task-types")
-def task_types():
-    return TASK_TYPES
+async def task_types(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "task_types")
 
 
 @router.get("/calibration")
-def calibration():
-    return CALIBRATION
+async def calibration(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "calibration")
 
 
 @router.get("/confidence-meters")
-def confidence_meters():
-    return CONFIDENCE_METERS
+async def confidence_meters(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "confidence_meters")
 
 
 @router.get("/verify-alerts")
-def verify_alerts():
-    return VERIFY_ALERTS
+async def verify_alerts(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "verify_alerts")
 
 
 @router.get("/weekly-report")
-def weekly_report():
-    return WEEKLY_REPORT
+async def weekly_report(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "weekly_report")
 
 
 @router.get("/score")
@@ -62,29 +61,29 @@ def check_verify(trust_score: float = 50.0, task_type: str = "Refactoring"):
 
 
 @router.get("/developer-profiles")
-def developer_profiles():
-    return DEVELOPER_PROFILES
+async def developer_profiles(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "developer_profiles")
 
 
 @router.get("/developer-profiles/{dev_name}")
-def developer_profile(dev_name: str):
+async def developer_profile(dev_name: str, db: AsyncSession = Depends(get_db)):
+    profiles = await get_data_key(db, "trust_engine", "developer_profiles") or []
     profile = next(
-        (p for p in DEVELOPER_PROFILES if p.name.lower() == dev_name.lower()), None
+        (p for p in profiles if p["name"].lower() == dev_name.lower()), None
     )
     if profile is None:
-        from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="Developer not found")
     return profile
 
 
 @router.get("/per-suggestion-scores")
-def per_suggestion_scores():
-    return PER_SUGGESTION_SCORES
+async def per_suggestion_scores(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "per_suggestion_scores")
 
 
 @router.get("/vte-protocols")
-def vte_protocols():
-    return VTE_PROTOCOLS
+async def vte_protocols(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "vte_protocols")
 
 
 @router.get("/vte-checklist/{suggestion_id}")
@@ -98,5 +97,5 @@ def vte_summary():
 
 
 @router.get("/calibration-report")
-def calibration_report():
-    return CALIBRATION_REPORT
+async def calibration_report(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "trust_engine", "calibration_report")

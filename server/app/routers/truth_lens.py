@@ -2,39 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.data.truth_lens_data import (
-    ALERT_HISTORY,
-    DEV_BREAKDOWN,
-    DIVERGENCE_TIMELINE,
-    GAUGE_DATA,
-    ILLUSION_SCORE,
-    RECENT_SURVEYS,
-    SELF_REPORT_COMPARATOR,
-    WEEKLY_DRIFT,
-    get_full_dashboard,
-    BELIEF_AUDITS,
-    BIAS_TYPOLOGIES,
-    CALIBRATION_SCORES,
-    DECISION_SIGNALS,
-    CONTAMINATION_ASSESSMENTS,
-    POST_DECISION_OUTCOMES,
-    ORG_CONTAMINATION,
-)
-from app.models.truth_lens import (
-    AlertConfig,
-    DevBreakdown,
-    DivergencePoint,
-    GaugeData,
-    IllusionScore,
-    ManagerAlert,
-    SelfReportEntry,
-    SurveyResponse,
-    SurveySubmission,
-    TruthLensDashboard,
-    WeeklyDrift,
-)
+from app.database import get_db
+from app.repository import get_dashboard as repo_get_dashboard, get_data_key
+from app.models.truth_lens import AlertConfig, SurveySubmission
 from app.services.alert_engine import (
     evaluate_dev_gap,
     evaluate_team_drift,
@@ -57,60 +30,61 @@ router = APIRouter(prefix="/api/truth-lens", tags=["Truth Lens"])
 
 
 # ── Full Dashboard ──
-@router.get("/dashboard", response_model=TruthLensDashboard)
-async def dashboard(threshold: int = Query(20, ge=5, le=80)):
-    """Return the complete Truth Lens dashboard payload."""
-    return get_full_dashboard(threshold)
+@router.get("/dashboard")
+async def dashboard(threshold: int = Query(20, ge=5, le=80), db: AsyncSession = Depends(get_db)):
+    data = await repo_get_dashboard(db, "truth_lens") or {}
+    data["alert_config"] = {"threshold_pct": threshold}
+    return data
 
 
 # ── Divergence Timeline ──
-@router.get("/divergence", response_model=list[DivergencePoint])
-async def divergence_timeline():
-    return DIVERGENCE_TIMELINE
+@router.get("/divergence")
+async def divergence_timeline(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "divergence_timeline")
 
 
 # ── Developer Breakdown ──
-@router.get("/developers", response_model=list[DevBreakdown])
-async def dev_breakdown():
-    return DEV_BREAKDOWN
+@router.get("/developers")
+async def dev_breakdown(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "dev_breakdown")
 
 
 # ── Real-time Self-Report vs Telemetry ──
-@router.get("/self-report", response_model=list[SelfReportEntry])
-async def self_report_comparator():
-    return SELF_REPORT_COMPARATOR
+@router.get("/self-report")
+async def self_report_comparator(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "self_report_comparator")
 
 
 # ── Weekly Perception Drift ──
-@router.get("/drift", response_model=list[WeeklyDrift])
-async def weekly_drift():
-    return WEEKLY_DRIFT
+@router.get("/drift")
+async def weekly_drift(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "weekly_drift")
 
 
 # ── Illusion Score ──
-@router.get("/illusion-score", response_model=IllusionScore)
-async def illusion_score():
-    return ILLUSION_SCORE
+@router.get("/illusion-score")
+async def illusion_score(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "illusion_score")
 
 
 # ── Gauge Data ──
-@router.get("/gauges", response_model=GaugeData)
-async def gauges():
-    return GAUGE_DATA
+@router.get("/gauges")
+async def gauges(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "gauges")
 
 
 # ══════ Alerts ══════
 
-@router.get("/alerts", response_model=list[ManagerAlert])
-async def alerts():
+@router.get("/alerts")
+async def alerts(db: AsyncSession = Depends(get_db)):
     """Return alert history (mock + runtime alerts)."""
     runtime_alerts = get_alert_history()
-    return ALERT_HISTORY + runtime_alerts
+    mock_alerts = await get_data_key(db, "truth_lens", "alerts") or []
+    return mock_alerts + runtime_alerts
 
 
-@router.put("/alerts/threshold", response_model=AlertConfig)
+@router.put("/alerts/threshold")
 async def set_alert_threshold(config: AlertConfig):
-    """Update alert threshold percentage."""
     new_thr = update_threshold(config.threshold_pct)
     return AlertConfig(threshold_pct=new_thr)
 
@@ -122,17 +96,19 @@ async def resolve_alert_endpoint(alert_id: int):
 
 
 @router.post("/alerts/evaluate")
-async def evaluate_alerts():
+async def evaluate_alerts(db: AsyncSession = Depends(get_db)):
     """Run alert evaluation on all developers against current threshold."""
+    dev_list = await get_data_key(db, "truth_lens", "dev_breakdown") or []
     fired: list[dict] = []
-    for dev in DEV_BREAKDOWN:
-        belief = float(dev.belief.replace("+", "").replace("%", ""))
-        reality = float(dev.reality.replace("+", "").replace("%", ""))
-        alert = evaluate_dev_gap(dev.name, belief, reality)
+    for dev in dev_list:
+        belief = float(str(dev["belief"]).replace("+", "").replace("%", ""))
+        reality = float(str(dev["reality"]).replace("+", "").replace("%", ""))
+        alert = evaluate_dev_gap(dev["name"], belief, reality)
         if alert:
             fired.append(alert.model_dump())
 
-    gaps = [d.gap for d in WEEKLY_DRIFT]
+    drift_data = await get_data_key(db, "truth_lens", "weekly_drift") or []
+    gaps = [d["gap"] for d in drift_data]
     drift_alert = evaluate_team_drift(gaps)
     if drift_alert:
         fired.append(drift_alert.model_dump())
@@ -159,18 +135,17 @@ async def survey_questions():
     return get_survey_questions()
 
 
-@router.get("/surveys/responses", response_model=list[SurveyResponse])
-async def survey_responses(limit: int = Query(20, ge=1, le=100)):
+@router.get("/surveys/responses")
+async def survey_responses(limit: int = Query(20, ge=1, le=100), db: AsyncSession = Depends(get_db)):
     """Return recent survey responses (mock + runtime)."""
     runtime = get_survey_responses(limit)
-    mock_as_dicts = [s.model_dump() for s in RECENT_SURVEYS]
-    combined = mock_as_dicts + runtime
+    mock_surveys = await get_data_key(db, "truth_lens", "recent_surveys") or []
+    combined = mock_surveys + runtime
     return combined[:limit]
 
 
 @router.post("/surveys/submit")
 async def submit_survey(submission: SurveySubmission):
-    """Submit a micro-survey response."""
     entry = store_survey_response(
         dev=submission.dev,
         question=submission.question,
@@ -186,7 +161,6 @@ async def send_survey_to_dev(
     commit_file: str = Query("unknown"),
     commit_sha: str = Query("unknown"),
 ):
-    """Trigger a Slack survey DM to a developer."""
     ok = await send_survey(dev_slack_id, commit_file, commit_sha)
     return {"sent": ok}
 
@@ -195,7 +169,6 @@ async def send_survey_to_dev(
 
 @router.get("/github/commits")
 async def recent_commits(since_hours: int = Query(24, ge=1, le=168)):
-    """Fetch recent commits from configured GitHub repo."""
     commits = await get_recent_commits(since_hours)
     return {
         "count": len(commits),
@@ -216,7 +189,6 @@ async def commit_telemetry(
     sha: str = Query(..., min_length=4, max_length=40),
     avg_minutes: float = Query(30, ge=1, le=480),
 ):
-    """Compute telemetry gain for a specific commit vs baseline avg."""
     detail = await get_commit_detail(sha)
     if not detail:
         return {"error": "Commit not found or GitHub not configured"}
@@ -226,18 +198,18 @@ async def commit_telemetry(
 # ══════ Belief Audit Engine ══════
 
 @router.get("/belief-audits")
-async def belief_audits():
-    return BELIEF_AUDITS
+async def belief_audits(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "belief_audits")
 
 
 @router.get("/bias-typologies")
-async def bias_typologies():
-    return BIAS_TYPOLOGIES
+async def bias_typologies(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "bias_typologies")
 
 
 @router.get("/calibration-scores")
-async def calibration_scores():
-    return CALIBRATION_SCORES
+async def calibration_scores(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "calibration_scores")
 
 
 @router.get("/belief-summary")
@@ -248,23 +220,23 @@ async def belief_summary():
 # ══════ Decision Contamination Tracker ══════
 
 @router.get("/decision-signals")
-async def decision_signals():
-    return DECISION_SIGNALS
+async def decision_signals(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "decision_signals")
 
 
 @router.get("/contamination-assessments")
-async def contamination_assessments():
-    return CONTAMINATION_ASSESSMENTS
+async def contamination_assessments(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "contamination_assessments")
 
 
 @router.get("/post-decision-outcomes")
-async def post_decision_outcomes():
-    return POST_DECISION_OUTCOMES
+async def post_decision_outcomes(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "post_decision_outcomes")
 
 
 @router.get("/org-contamination")
-async def org_contamination():
-    return ORG_CONTAMINATION
+async def org_contamination(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "truth_lens", "org_contamination")
 
 
 @router.get("/contamination-summary")

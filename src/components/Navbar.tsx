@@ -1,6 +1,16 @@
-import { Bell, Search, ChevronDown } from 'lucide-react'
+import { Bell, Search, ChevronDown, LogOut } from 'lucide-react'
+import { useAuth } from '../auth/AuthContext'
+import { useNavigate } from 'react-router-dom'
 
 export default function Navbar() {
+    const { user, logout } = useAuth()
+    const navigate = useNavigate()
+
+    const handleLogout = () => {
+        logout()
+        navigate('/login', { replace: true })
+    }
+
     return (
         <header
             className="flex items-center justify-between px-6 py-3"
@@ -57,7 +67,7 @@ export default function Navbar() {
                     </span>
                 </div>
 
-                {/* Team badge */}
+                {/* User badge */}
                 <div
                     className="flex items-center gap-2 px-3 py-1.5 rounded-lg cursor-pointer"
                     style={{
@@ -69,14 +79,30 @@ export default function Navbar() {
                         className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
                         style={{ background: 'linear-gradient(135deg, #00D4FF, #7C3AED)', color: '#fff' }}
                     >
-                        V
+                        {user?.name?.charAt(0).toUpperCase() || 'D'}
                     </div>
-                    <span className="text-sm font-medium text-white">Viju</span>
+                    <span className="text-sm font-medium text-white">{user?.name || 'Developer'}</span>
                     <span className="text-xs" style={{ color: '#94A3B8' }}>
-                        Backend Squad
+                        Developer
                     </span>
                     <ChevronDown size={14} style={{ color: '#94A3B8' }} />
                 </div>
+
+                {/* Logout */}
+                <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all"
+                    style={{
+                        background: 'rgba(239,68,68,0.1)',
+                        border: '1px solid rgba(239,68,68,0.25)',
+                        color: '#EF4444',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                    }}
+                >
+                    <LogOut size={14} />
+                    Logout
+                </button>
             </div>
         </header>
     )

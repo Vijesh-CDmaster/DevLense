@@ -1,13 +1,8 @@
-from fastapi import APIRouter
-from app.data.leadership_data import (
-    get_full_dashboard, FRICTION_HEATMAP, EMPATHY_GAPS, ACTION_LOOP,
-    DECISION_IMPACTS, TRANSLATIONS, PULSE_RESULTS, EMPATHY_SCORE,
-    DEVELOPER_FRICTIONS, FRICTION_TRENDS, IMPACT_SIMULATIONS,
-    EMPATHY_DIMENSIONS, LEADERSHIP_BRIEFING, ESCALATIONS,
-    RT_FRICTION_HEATMAP, NET_AI_ROI, LEADERSHIP_BRIEF_VP,
-    DECISION_EVENTS, DECISION_IMPACT_MEASUREMENTS,
-    FRICTION_DEBT_LEDGER, BIDIRECTIONAL_DASHBOARD, EMPATHY_ROI_REPORT,
-)
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.repository import get_dashboard, get_data_key
 from app.services.empathy_engine import (
     compute_empathy_score, translate_pain_to_kpi,
     get_developer_friction_summary, compute_empathy_dimensions_summary,
@@ -20,43 +15,43 @@ router = APIRouter(prefix="/api/leadership", tags=["leadership"])
 
 
 @router.get("/dashboard")
-def dashboard():
-    return get_full_dashboard()
+async def dashboard(db: AsyncSession = Depends(get_db)):
+    return await get_dashboard(db, "leadership")
 
 
 @router.get("/friction-heatmap")
-def friction_heatmap():
-    return FRICTION_HEATMAP
+async def friction_heatmap(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "friction_heatmap")
 
 
 @router.get("/empathy-gaps")
-def empathy_gaps():
-    return EMPATHY_GAPS
+async def empathy_gaps(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "empathy_gaps")
 
 
 @router.get("/action-loop")
-def action_loop():
-    return ACTION_LOOP
+async def action_loop(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "action_loop")
 
 
 @router.get("/decision-impacts")
-def decision_impacts():
-    return DECISION_IMPACTS
+async def decision_impacts(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "decision_impacts")
 
 
 @router.get("/translations")
-def translations():
-    return TRANSLATIONS
+async def translations(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "translations")
 
 
 @router.get("/pulse-results")
-def pulse_results():
-    return PULSE_RESULTS
+async def pulse_results(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "pulse_results")
 
 
 @router.get("/empathy-score")
-def empathy_score():
-    return EMPATHY_SCORE
+async def empathy_score(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "empathy_score")
 
 
 @router.get("/compute-empathy")
@@ -70,8 +65,8 @@ def translate(pain: str = "Code reviews are slow"):
 
 
 @router.get("/developer-frictions")
-def developer_frictions():
-    return DEVELOPER_FRICTIONS
+async def developer_frictions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "developer_frictions")
 
 
 @router.get("/developer-friction-summary")
@@ -80,18 +75,18 @@ def developer_friction_summary():
 
 
 @router.get("/friction-trends")
-def friction_trends():
-    return FRICTION_TRENDS
+async def friction_trends(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "friction_trends")
 
 
 @router.get("/impact-simulations")
-def impact_simulations():
-    return IMPACT_SIMULATIONS
+async def impact_simulations(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "impact_simulations")
 
 
 @router.get("/empathy-dimensions")
-def empathy_dimensions():
-    return EMPATHY_DIMENSIONS
+async def empathy_dimensions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "empathy_dimensions")
 
 
 @router.get("/empathy-dimensions-summary")
@@ -100,53 +95,53 @@ def empathy_dimensions_summary():
 
 
 @router.get("/briefing")
-def briefing():
-    return LEADERSHIP_BRIEFING
+async def briefing(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "leadership_briefing")
 
 
 @router.get("/escalations")
-def escalations_endpoint():
-    return ESCALATIONS
+async def escalations_endpoint(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "escalations")
 
 
 @router.get("/rt-friction-heatmap")
-def rt_friction_heatmap():
-    return RT_FRICTION_HEATMAP
+async def rt_friction_heatmap(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "rt_friction_heatmap")
 
 
 @router.get("/net-ai-roi")
-def net_ai_roi():
-    return NET_AI_ROI
+async def net_ai_roi(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "net_ai_roi")
 
 
 @router.get("/leadership-brief")
-def leadership_brief():
-    return LEADERSHIP_BRIEF_VP
+async def leadership_brief(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "leadership_brief")
 
 
 @router.get("/decision-events")
-def decision_events():
-    return DECISION_EVENTS
+async def decision_events(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "decision_events")
 
 
 @router.get("/decision-impact-measurements")
-def decision_impact_measurements():
-    return DECISION_IMPACT_MEASUREMENTS
+async def decision_impact_measurements(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "decision_impact_measurements")
 
 
 @router.get("/friction-debt-ledger")
-def friction_debt_ledger():
-    return FRICTION_DEBT_LEDGER
+async def friction_debt_ledger(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "friction_debt_ledger")
 
 
 @router.get("/bidirectional-dashboard")
-def bidirectional_dashboard():
-    return BIDIRECTIONAL_DASHBOARD
+async def bidirectional_dashboard(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "bidirectional_dashboard")
 
 
 @router.get("/empathy-roi-report")
-def empathy_roi_report():
-    return EMPATHY_ROI_REPORT
+async def empathy_roi_report(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "leadership", "empathy_roi_report")
 
 
 @router.get("/friction-summary")
@@ -162,8 +157,3 @@ def debt_summary():
 @router.get("/accountability-summary")
 def accountability_summary():
     return compute_accountability_summary()
-
-
-@router.get("/escalations")
-def escalations():
-    return ESCALATIONS

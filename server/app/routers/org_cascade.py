@@ -1,10 +1,8 @@
-from fastapi import APIRouter
-from app.data.org_cascade_data import (
-    get_full_dashboard, SUMMARY, DORA_METRICS, BOTTLENECKS,
-    AMPLIFIERS, CASCADE_FLOW, ROI_REPORT, DORA_CORRELATIONS,
-    WASTE_ENTRIES, WASTE_WEEKLY_TRENDS, TRUE_AI_ROI, TEAM_WASTE_BREAKDOWN,
-    CASCADE_EFFICIENCY, TEAM_CASCADE_VIEWS, FLOW_STAGE_DETAILS, STORY_POINT_TRACKER,
-)
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.database import get_db
+from app.repository import get_dashboard, get_data_key
 from app.services.waste_classifier import compute_waste_summary, compute_waste_trend_direction
 from app.services.cascade_analyzer import compute_cascade_health, compute_story_point_gap
 
@@ -12,50 +10,50 @@ router = APIRouter(prefix="/api/org-cascade", tags=["org-cascade"])
 
 
 @router.get("/dashboard")
-def dashboard():
-    return get_full_dashboard()
+async def dashboard(db: AsyncSession = Depends(get_db)):
+    return await get_dashboard(db, "org_cascade")
 
 
 @router.get("/summary")
-def summary():
-    return SUMMARY
+async def summary(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "summary")
 
 
 @router.get("/dora-metrics")
-def dora_metrics():
-    return DORA_METRICS
+async def dora_metrics(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "dora_metrics")
 
 
 @router.get("/bottlenecks")
-def bottlenecks():
-    return BOTTLENECKS
+async def bottlenecks(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "bottlenecks")
 
 
 @router.get("/amplifiers")
-def amplifiers():
-    return AMPLIFIERS
+async def amplifiers(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "amplifiers")
 
 
 @router.get("/cascade-flow")
-def cascade_flow():
-    return CASCADE_FLOW
+async def cascade_flow(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "cascade_flow")
 
 
 @router.get("/roi-report")
-def roi_report():
-    return ROI_REPORT
+async def roi_report(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "roi_report")
 
 
 @router.get("/dora-correlations")
-def dora_correlations():
-    return DORA_CORRELATIONS
+async def dora_correlations(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "dora_correlations")
 
 
 # ── AI Waste Classifier endpoints ──
 
 @router.get("/waste-entries")
-def waste_entries():
-    return WASTE_ENTRIES
+async def waste_entries(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "waste_entries")
 
 
 @router.get("/waste-summary")
@@ -64,8 +62,8 @@ def waste_summary():
 
 
 @router.get("/waste-trends")
-def waste_trends():
-    return WASTE_WEEKLY_TRENDS
+async def waste_trends(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "waste_trends")
 
 
 @router.get("/waste-trend-direction")
@@ -74,20 +72,20 @@ def waste_trend_direction():
 
 
 @router.get("/true-ai-roi")
-def true_ai_roi():
-    return TRUE_AI_ROI
+async def true_ai_roi(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "true_ai_roi")
 
 
 @router.get("/team-waste")
-def team_waste():
-    return TEAM_WASTE_BREAKDOWN
+async def team_waste(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "team_waste")
 
 
 # ── DORA-AI Cascade Dashboard endpoints ──
 
 @router.get("/cascade-efficiency")
-def cascade_efficiency():
-    return CASCADE_EFFICIENCY
+async def cascade_efficiency(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "cascade_efficiency")
 
 
 @router.get("/cascade-health")
@@ -96,18 +94,18 @@ def cascade_health():
 
 
 @router.get("/team-cascades")
-def team_cascades():
-    return TEAM_CASCADE_VIEWS
+async def team_cascades(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "team_cascades")
 
 
 @router.get("/flow-details")
-def flow_details():
-    return FLOW_STAGE_DETAILS
+async def flow_details(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "flow_details")
 
 
 @router.get("/story-points")
-def story_points():
-    return STORY_POINT_TRACKER
+async def story_points(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "org_cascade", "story_points")
 
 
 @router.get("/story-point-gap")

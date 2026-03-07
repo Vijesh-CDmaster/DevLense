@@ -1,27 +1,10 @@
 """Knowledge Vault API router."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.knowledge_vault import (
-    KnowledgeVaultDashboard, KnowledgeNode, InterviewMessage,
-    ArchitecturalDecision, ArchaeologyResult, KnowledgeRiskScore,
-    ReasoningExtraction, OnboardingQuery, KnowledgeDecayItem,
-    InterviewSession, KnowledgeTransferEntry, UndocumentedRegion,
-    OnboardingInsight, DecisionChainLink,
-    ContextualExtractionSession, DecisionNode, ConstraintAlert,
-    KnowledgeDecayEntry, KnowledgeAssetValuation,
-    MortalityTimeline, DepartureExposure,
-)
-from app.data.knowledge_vault_data import (
-    NODES, INTERVIEW_HISTORY, DECISIONS, RISK_SCORE,
-    EXTRACTIONS, ONBOARDING_QUERIES, ARCHAEOLOGY_RESULTS,
-    DECAY_ITEMS, INTERVIEW_SESSIONS, TRANSFER_MATRIX,
-    UNDOCUMENTED_REGIONS, ONBOARDING_INSIGHTS, DECISION_CHAINS,
-    EXTRACTION_SESSION, DECISION_NODES, CONSTRAINT_ALERTS,
-    KNOWLEDGE_DECAY_SCORES, KNOWLEDGE_ASSET_VALUATIONS,
-    MORTALITY_TIMELINE, DEPARTURE_EXPOSURE,
-    get_full_dashboard,
-)
+from app.database import get_db
+from app.repository import get_dashboard as repo_get_dashboard, get_data_key
 from app.services.knowledge_analyzer import (
     compute_risk_score, compute_bus_factor,
     compute_decay_summary, compute_transfer_velocity, compute_knowledge_gaps,
@@ -35,153 +18,162 @@ router = APIRouter(prefix="/api/knowledge-vault", tags=["knowledge-vault"])
 
 
 @router.get("/dashboard")
-async def get_dashboard():
-    return get_full_dashboard()
+async def get_dashboard(db: AsyncSession = Depends(get_db)):
+    return await repo_get_dashboard(db, "knowledge_vault")
 
 
-@router.get("/nodes", response_model=list[KnowledgeNode])
-async def get_nodes():
-    return NODES
+@router.get("/nodes")
+async def get_nodes(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "nodes")
 
 
-@router.get("/interviews", response_model=list[InterviewMessage])
-async def get_interviews():
-    return INTERVIEW_HISTORY
+@router.get("/interviews")
+async def get_interviews(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "interview_history")
 
 
-@router.get("/decisions", response_model=list[ArchitecturalDecision])
-async def get_decisions():
-    return DECISIONS
+@router.get("/decisions")
+async def get_decisions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "decisions")
 
 
-@router.get("/risk-score", response_model=KnowledgeRiskScore)
-async def get_risk_score():
-    return RISK_SCORE
+@router.get("/risk-score")
+async def get_risk_score(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "risk_score")
 
 
-@router.get("/extractions", response_model=list[ReasoningExtraction])
-async def get_extractions():
-    return EXTRACTIONS
+@router.get("/extractions")
+async def get_extractions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "recent_extractions")
 
 
-@router.get("/onboarding", response_model=list[OnboardingQuery])
-async def get_onboarding():
-    return ONBOARDING_QUERIES
+@router.get("/onboarding")
+async def get_onboarding(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "onboarding_queries")
 
 
-@router.get("/archaeology", response_model=list[ArchaeologyResult])
-async def get_archaeology():
-    return ARCHAEOLOGY_RESULTS
+@router.get("/archaeology")
+async def get_archaeology(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "archaeology_results")
 
 
 @router.get("/bus-factor")
-async def get_bus_factor():
+async def get_bus_factor(db: AsyncSession = Depends(get_db)):
+    nodes = await get_data_key(db, "knowledge_vault", "nodes") or []
     result = []
-    for node in NODES:
+    for node in nodes:
         result.append({
-            "module": node.label,
-            "owners": node.owners,
-            "risk": compute_bus_factor(node.owners),
+            "module": node["label"],
+            "owners": node["owners"],
+            "risk": compute_bus_factor(node["owners"]),
         })
     return result
 
 
-@router.get("/decay", response_model=list[KnowledgeDecayItem])
-async def get_decay():
-    return DECAY_ITEMS
+@router.get("/decay")
+async def get_decay(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "decay_items")
 
 
 @router.get("/decay-summary")
-async def get_decay_summary():
-    return compute_decay_summary(DECAY_ITEMS)
+async def get_decay_summary(db: AsyncSession = Depends(get_db)):
+    items = await get_data_key(db, "knowledge_vault", "decay_items") or []
+    return compute_decay_summary(items)
 
 
-@router.get("/interview-sessions", response_model=list[InterviewSession])
-async def get_interview_sessions():
-    return INTERVIEW_SESSIONS
+@router.get("/interview-sessions")
+async def get_interview_sessions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "interview_sessions")
 
 
-@router.get("/transfer-matrix", response_model=list[KnowledgeTransferEntry])
-async def get_transfer_matrix():
-    return TRANSFER_MATRIX
+@router.get("/transfer-matrix")
+async def get_transfer_matrix(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "transfer_matrix")
 
 
 @router.get("/transfer-velocity")
-async def get_transfer_velocity():
-    return compute_transfer_velocity(TRANSFER_MATRIX)
+async def get_transfer_velocity(db: AsyncSession = Depends(get_db)):
+    matrix = await get_data_key(db, "knowledge_vault", "transfer_matrix") or []
+    return compute_transfer_velocity(matrix)
 
 
-@router.get("/undocumented", response_model=list[UndocumentedRegion])
-async def get_undocumented():
-    return UNDOCUMENTED_REGIONS
+@router.get("/undocumented")
+async def get_undocumented(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "undocumented_regions")
 
 
-@router.get("/onboarding-insights", response_model=list[OnboardingInsight])
-async def get_onboarding_insights():
-    return ONBOARDING_INSIGHTS
+@router.get("/onboarding-insights")
+async def get_onboarding_insights(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "onboarding_insights")
 
 
 @router.get("/knowledge-gaps")
-async def get_knowledge_gaps():
-    return compute_knowledge_gaps(ONBOARDING_INSIGHTS)
+async def get_knowledge_gaps(db: AsyncSession = Depends(get_db)):
+    insights = await get_data_key(db, "knowledge_vault", "onboarding_insights") or []
+    return compute_knowledge_gaps(insights)
 
 
-@router.get("/decision-chains", response_model=list[DecisionChainLink])
-async def get_decision_chains():
-    return DECISION_CHAINS
+@router.get("/decision-chains")
+async def get_decision_chains(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "decision_chains")
 
 
 # ── Contextual Extraction Engine ──
 
 @router.get("/extraction-session")
-async def get_extraction_session():
-    return EXTRACTION_SESSION
+async def get_extraction_session(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "extraction_session")
 
 
-@router.get("/decision-nodes", response_model=list[DecisionNode])
-async def get_decision_nodes():
-    return DECISION_NODES
+@router.get("/decision-nodes")
+async def get_decision_nodes(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "decision_nodes")
 
 
-@router.get("/constraint-alerts", response_model=list[ConstraintAlert])
-async def get_constraint_alerts():
-    return CONSTRAINT_ALERTS
+@router.get("/constraint-alerts")
+async def get_constraint_alerts(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "constraint_alerts")
 
 
 @router.get("/constraint-coverage")
-async def get_constraint_coverage():
-    return compute_constraint_coverage(DECISION_NODES, CONSTRAINT_ALERTS)
+async def get_constraint_coverage(db: AsyncSession = Depends(get_db)):
+    nodes = await get_data_key(db, "knowledge_vault", "decision_nodes") or []
+    alerts = await get_data_key(db, "knowledge_vault", "constraint_alerts") or []
+    return compute_constraint_coverage(nodes, alerts)
 
 
 # ── Knowledge Mortality Forecaster ──
 
-@router.get("/knowledge-decay-scores", response_model=list[KnowledgeDecayEntry])
-async def get_knowledge_decay_scores():
-    return KNOWLEDGE_DECAY_SCORES
+@router.get("/knowledge-decay-scores")
+async def get_knowledge_decay_scores(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "knowledge_decay_scores")
 
 
-@router.get("/asset-valuations", response_model=list[KnowledgeAssetValuation])
-async def get_asset_valuations():
-    return KNOWLEDGE_ASSET_VALUATIONS
+@router.get("/asset-valuations")
+async def get_asset_valuations(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "asset_valuations")
 
 
 @router.get("/mortality-timeline")
-async def get_mortality_timeline():
-    return MORTALITY_TIMELINE
+async def get_mortality_timeline(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "mortality_timeline")
 
 
 @router.get("/departure-exposure")
-async def get_departure_exposure():
-    return DEPARTURE_EXPOSURE
+async def get_departure_exposure(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "knowledge_vault", "departure_exposure")
 
 
 @router.get("/mortality-summary")
-async def get_mortality_summary():
-    return compute_mortality_summary(
-        KNOWLEDGE_DECAY_SCORES, KNOWLEDGE_ASSET_VALUATIONS, MORTALITY_TIMELINE,
-    )
+async def get_mortality_summary(db: AsyncSession = Depends(get_db)):
+    decay_scores = await get_data_key(db, "knowledge_vault", "knowledge_decay_scores") or []
+    valuations = await get_data_key(db, "knowledge_vault", "asset_valuations") or []
+    timeline = await get_data_key(db, "knowledge_vault", "mortality_timeline") or {}
+    return compute_mortality_summary(decay_scores, valuations, timeline)
 
 
 @router.get("/departure-impact")
-async def get_departure_impact():
-    return compute_departure_impact(DEPARTURE_EXPOSURE, KNOWLEDGE_ASSET_VALUATIONS)
+async def get_departure_impact(db: AsyncSession = Depends(get_db)):
+    exposure = await get_data_key(db, "knowledge_vault", "departure_exposure") or []
+    valuations = await get_data_key(db, "knowledge_vault", "asset_valuations") or []
+    return compute_departure_impact(exposure, valuations)

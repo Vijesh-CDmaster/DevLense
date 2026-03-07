@@ -1,10 +1,20 @@
 const API_BASE = '/api'
 
 export async function fetchApi<T>(path: string, init?: RequestInit): Promise<T> {
+    const token = localStorage.getItem('token')
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (token) headers['Authorization'] = `Bearer ${token}`
+
     const res = await fetch(`${API_BASE}${path}`, {
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         ...init,
     })
+    if (res.status === 401) {
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        window.location.href = '/login'
+        throw new Error('Session expired')
+    }
     if (!res.ok) throw new Error(`API ${res.status}: ${res.statusText}`)
     return res.json()
 }

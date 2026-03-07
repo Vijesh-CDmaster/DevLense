@@ -1,23 +1,10 @@
 """Productivity Hub API router — /api/productivity-hub/*."""
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.productivity_hub import (
-    ProductivityDashboard,
-    HPSRadarPoint, HPSDimension, HPSWeekly,
-    DevFlowScore, FlowTimelineSlot,
-    ContextSwitchMetric, CognitiveLoadHourly,
-    AIQualityModule, AIQualityTrendPoint,
-    ReworkSprint, ReworkPR,
-)
-from app.data.productivity_hub_data import (
-    get_full_dashboard,
-    get_hps_radar, get_dimensions, get_hps_weekly,
-    get_dev_flow_scores, get_flow_timeline,
-    get_context_switches, get_cognitive_load_hourly,
-    get_ai_quality_by_module, get_ai_quality_trend,
-    get_rework_data, get_rework_prs,
-)
+from app.database import get_db
+from app.repository import get_dashboard, get_data_key
 from app.services import ide_telemetry, calendar_service
 
 router = APIRouter(prefix="/api/productivity-hub", tags=["Productivity Hub"])
@@ -25,75 +12,75 @@ router = APIRouter(prefix="/api/productivity-hub", tags=["Productivity Hub"])
 
 # ── Full dashboard (single call) ──
 
-@router.get("/dashboard", response_model=ProductivityDashboard)
-async def dashboard():
+@router.get("/dashboard")
+async def dashboard(db: AsyncSession = Depends(get_db)):
     """Return the entire Productivity Hub payload in one shot."""
-    return get_full_dashboard()
+    return await get_dashboard(db, "productivity_hub")
 
 
 # ── HPS endpoints ──
 
-@router.get("/hps/radar", response_model=list[HPSRadarPoint])
-async def hps_radar():
-    return get_hps_radar()
+@router.get("/hps/radar")
+async def hps_radar(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "hps_radar")
 
 
-@router.get("/hps/dimensions", response_model=list[HPSDimension])
-async def hps_dimensions():
-    return get_dimensions()
+@router.get("/hps/dimensions")
+async def hps_dimensions(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "dimensions")
 
 
-@router.get("/hps/weekly", response_model=list[HPSWeekly])
-async def hps_weekly():
-    return get_hps_weekly()
+@router.get("/hps/weekly")
+async def hps_weekly(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "hps_weekly")
 
 
 # ── FLOW Score endpoints ──
 
-@router.get("/flow/scores", response_model=list[DevFlowScore])
+@router.get("/flow/scores")
 async def flow_scores():
     return await ide_telemetry.fetch_flow_scores()
 
 
-@router.get("/flow/timeline", response_model=list[FlowTimelineSlot])
+@router.get("/flow/timeline")
 async def flow_timeline():
     return await ide_telemetry.fetch_flow_timeline()
 
 
 # ── Cognitive Load endpoints ──
 
-@router.get("/cognitive/switches", response_model=list[ContextSwitchMetric])
+@router.get("/cognitive/switches")
 async def context_switches():
     return await ide_telemetry.fetch_context_switches()
 
 
-@router.get("/cognitive/hourly", response_model=list[CognitiveLoadHourly])
+@router.get("/cognitive/hourly")
 async def cognitive_load_hourly():
     return await ide_telemetry.fetch_cognitive_load_hourly()
 
 
 # ── AI Quality Ratio endpoints ──
 
-@router.get("/ai-quality/modules", response_model=list[AIQualityModule])
-async def ai_quality_modules():
-    return get_ai_quality_by_module()
+@router.get("/ai-quality/modules")
+async def ai_quality_modules(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "ai_quality_by_module")
 
 
-@router.get("/ai-quality/trend", response_model=list[AIQualityTrendPoint])
-async def ai_quality_trend():
-    return get_ai_quality_trend()
+@router.get("/ai-quality/trend")
+async def ai_quality_trend(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "ai_quality_trend")
 
 
 # ── Rework Attribution endpoints ──
 
-@router.get("/rework/sprints", response_model=list[ReworkSprint])
-async def rework_sprints():
-    return get_rework_data()
+@router.get("/rework/sprints")
+async def rework_sprints(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "rework_data")
 
 
-@router.get("/rework/prs", response_model=list[ReworkPR])
-async def rework_prs():
-    return get_rework_prs()
+@router.get("/rework/prs")
+async def rework_prs(db: AsyncSession = Depends(get_db)):
+    return await get_data_key(db, "productivity_hub", "rework_prs")
 
 
 # ── Calendar / Meetings ──
