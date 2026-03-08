@@ -13,8 +13,11 @@ class Base(DeclarativeBase):
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,
-    pool_size=5,
-    max_overflow=10,
+    **(
+        {}
+        if settings.DATABASE_URL.startswith("sqlite")
+        else {"pool_size": 5, "max_overflow": 10}
+    ),
 )
 
 async_session_factory = async_sessionmaker(

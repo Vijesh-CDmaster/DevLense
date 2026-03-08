@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db_models import ModuleData
@@ -43,10 +42,9 @@ async def update_data_key(
 
 async def upsert_module(db: AsyncSession, module: str, data: dict) -> None:
     """Insert or update the full dashboard payload for a module."""
-    stmt = pg_insert(ModuleData).values(module=module, data=data)
-    stmt = stmt.on_conflict_do_update(
-        index_elements=["module"],
-        set_={"data": data},
-    )
-    await db.execute(stmt)
+    row = await db.get(ModuleData, module)
+    if row:
+        row.data = data
+    else:
+        db.add(ModuleData(module=module, data=data))
     await db.commit()
